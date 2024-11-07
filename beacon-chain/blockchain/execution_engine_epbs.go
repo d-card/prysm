@@ -30,7 +30,7 @@ func (s *Service) notifyForkchoiceUpdateEPBS(ctx context.Context, blockhash [32]
 		FinalizedBlockHash: finalizedHash[:],
 	}
 	if attributes == nil {
-		attributes = payloadattribute.EmptyWithVersion(version.Electra)
+		attributes = payloadattribute.EmptyWithVersion(version.Deneb)
 	}
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attributes)
 	if err != nil {

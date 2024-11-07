@@ -50,7 +50,7 @@ func New(i interface{}) (Attributer, error) {
 func EmptyWithVersion(ver int) Attributer {
 	if ver == version.EPBS {
 		return &data{
-			version: version.Electra,
+			version: version.Deneb,
 		}
 	}
 	return &data{

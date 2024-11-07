@@ -105,6 +105,13 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 		return nil
 	}
 	if cfg.roblock.Version() >= version.EPBS {
+		if err := s.saveHead(ctx, cfg.headRoot, cfg.roblock, cfg.postState); err != nil {
+			log.WithError(err).Error("could not save head")
+		}
+		if err := s.pruneAttsFromPool(cfg.roblock); err != nil {
+			log.WithError(err).Error("could not prune attestations from pool")
+		}
+
 		// update the NSC and handle epoch boundaries here since we do
 		// not send FCU at all
 		return s.updateCachesPostBlockProcessing(cfg)

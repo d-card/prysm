@@ -54,10 +54,10 @@ func logStateTransitionData(b interfaces.ReadOnlyBeaconBlock) error {
 		if err != nil {
 			return err
 		}
-		log = log.WithFields(logrus.Fields{"payloadHash": header.BlockHash(),
+		log = log.WithFields(logrus.Fields{"payloadHash": fmt.Sprintf("%#x", header.BlockHash()),
 			"builderIndex":           header.BuilderIndex(),
 			"value":                  header.Value(),
-			"blobKzgCommitmentsRoot": header.BlobKzgCommitmentsRoot(),
+			"blobKzgCommitmentsRoot": fmt.Sprintf("%#x", header.BlobKzgCommitmentsRoot()),
 		})
 	} else {
 		if b.Version() >= version.Bellatrix {

@@ -16,7 +16,6 @@ func ValidatePayloadHeaderSignature(st state.ReadOnlyBeaconState, sh interfaces.
 	if err != nil {
 		return err
 	}
-
 	pubkey := st.PubkeyAtIndex(h.BuilderIndex())
 	pub, err := bls.PublicKeyFromBytes(pubkey[:])
 	if err != nil {

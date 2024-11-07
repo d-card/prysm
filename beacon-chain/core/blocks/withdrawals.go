@@ -242,7 +242,7 @@ func ProcessWithdrawals(st state.BeaconState, executionData interfaces.Execution
 		}
 
 		if !IsParentBlockFull {
-			return nil, nil
+			return st, nil
 		}
 	}
 
