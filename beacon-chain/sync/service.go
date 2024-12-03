@@ -165,6 +165,7 @@ type Service struct {
 	availableBlocker                 coverage.AvailableBlocker
 	ctxMap                           ContextByteVersions
 	slasherEnabled                   bool
+	inclusionLists                   *cache.InclusionLists
 }
 
 // NewService initializes new regular sync service.
