@@ -4,17 +4,19 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"math"
+	"sort"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
-	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -172,59 +174,83 @@ func (s *Service) processFetchedDataRegSync(
 		log.WithError(err).Debug("batch did not contain a valid sequence of unprocessed blocks")
 		return
 	}
+
 	if len(bwb) == 0 {
 		return
 	}
-	if coreTime.PeerDASIsActive(startSlot) {
-		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage)
-		batchFields := logrus.Fields{
-			"firstSlot":        data.bwb[0].Block.Block().Slot(),
-			"firstUnprocessed": bwb[0].Block.Block().Slot(),
+
+	// Compute the first electra slot.
+	firstElectraSlot, err := slots.EpochStart(params.BeaconConfig().ElectraForkEpoch)
+	if err != nil {
+		firstElectraSlot = math.MaxUint64
+	}
+
+	// Find the first block with a slot greater than or equal to the first electra slot.
+	// (Blocks are sorted by slot)
+	firstElectraIndex := sort.Search(len(bwb), func(i int) bool {
+		return bwb[i].Block.Block().Slot() >= firstElectraSlot
+	})
+
+	preElectraBwbs := bwb[:firstElectraIndex]
+	postElectraBwbs := bwb[firstElectraIndex:]
+
+	blobBatchVerifier := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncBlobSidecarRequirements)
+	lazilyPersistentStore := das.NewLazilyPersistentStore(s.cfg.BlobStorage, blobBatchVerifier)
+
+	log := log.WithField("firstSlot", data.bwb[0].Block.Block().Slot())
+
+	logPre := log
+	if len(preElectraBwbs) > 0 {
+		logPre = logPre.WithField("firstUnprocessed", preElectraBwbs[0].Block.Block().Slot())
+	}
+
+	for _, b := range preElectraBwbs {
+		log := logPre.WithFields(syncFields(b.Block))
+
+		if err := lazilyPersistentStore.Persist(s.clock.CurrentSlot(), b.Blobs...); err != nil {
+			log.WithError(err).Warning("Batch failure due to BlobSidecar issues")
+			return
 		}
 
-		for _, b := range bwb {
-			if err := avs.PersistColumns(s.clock.CurrentSlot(), b.Columns...); err != nil {
-				log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Batch failure due to DataColumnSidecar issues")
+		if err := s.processBlock(ctx, genesis, b, s.cfg.Chain.ReceiveBlock, lazilyPersistentStore); err != nil {
+			switch {
+			case errors.Is(err, errParentDoesNotExist):
+				log.
+					WithField("missingParent", fmt.Sprintf("%#x", b.Block.Block().ParentRoot())).
+					Debug("Could not process batch blocks due to missing parent")
+				return
+			default:
+				log.WithError(err).Warning("Block processing failure")
 				return
 			}
-
-			if err := s.processBlock(ctx, genesis, b, s.cfg.Chain.ReceiveBlock, avs); err != nil {
-				switch {
-				case errors.Is(err, errParentDoesNotExist):
-					log.WithFields(batchFields).WithField("missingParent", fmt.Sprintf("%#x", b.Block.Block().ParentRoot())).
-						WithFields(syncFields(b.Block)).Debug("Could not process batch blocks due to missing parent")
-					return
-				default:
-					log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Block processing failure")
-					return
-				}
-			}
 		}
-	} else {
-		bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncBlobSidecarRequirements)
-		avs := das.NewLazilyPersistentStore(s.cfg.BlobStorage, bv)
+	}
 
-		batchFields := logrus.Fields{
-			"firstSlot":        data.bwb[0].Block.Block().Slot(),
-			"firstUnprocessed": bwb[0].Block.Block().Slot(),
+	logPost := log
+	if len(postElectraBwbs) > 0 {
+		logPost = log.WithField("firstUnprocessed", postElectraBwbs[0].Block.Block().Slot())
+	}
+
+	lazilyPersistentStoreColumn := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage)
+
+	for _, b := range postElectraBwbs {
+		log := logPost.WithFields(syncFields(b.Block))
+
+		if err := lazilyPersistentStoreColumn.PersistColumns(s.clock.CurrentSlot(), b.Columns...); err != nil {
+			log.WithError(err).Warning("Batch failure due to DataColumnSidecar issues")
+			return
 		}
 
-		for _, b := range bwb {
-			if err := avs.Persist(s.clock.CurrentSlot(), b.Blobs...); err != nil {
-				log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Batch failure due to BlobSidecar issues")
+		if err := s.processBlock(ctx, genesis, b, s.cfg.Chain.ReceiveBlock, lazilyPersistentStoreColumn); err != nil {
+			switch {
+			case errors.Is(err, errParentDoesNotExist):
+				log.
+					WithField("missingParent", fmt.Sprintf("%#x", b.Block.Block().ParentRoot())).
+					Debug("Could not process batch blocks due to missing parent")
 				return
-			}
-
-			if err := s.processBlock(ctx, genesis, b, s.cfg.Chain.ReceiveBlock, avs); err != nil {
-				switch {
-				case errors.Is(err, errParentDoesNotExist):
-					log.WithFields(batchFields).WithField("missingParent", fmt.Sprintf("%#x", b.Block.Block().ParentRoot())).
-						WithFields(syncFields(b.Block)).Debug("Could not process batch blocks due to missing parent")
-					return
-				default:
-					log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Block processing failure")
-					return
-				}
+			default:
+				log.WithError(err).Warning("Block processing failure")
+				return
 			}
 		}
 	}
@@ -349,54 +375,83 @@ func validUnprocessed(ctx context.Context, bwb []blocks.BlockWithROBlobs, headSl
 	return bwb[nonProcessedIdx:], nil
 }
 
-func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	bwb []blocks.BlockWithROBlobs, bFunc batchBlockReceiverFn) error {
-	if len(bwb) == 0 {
+func (s *Service) processBatchedBlocks(
+	ctx context.Context,
+	genesis time.Time,
+	bwbs []blocks.BlockWithROBlobs,
+	bFunc batchBlockReceiverFn,
+) error {
+	if len(bwbs) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
+
 	headSlot := s.cfg.Chain.HeadSlot()
-	var err error
-	bwb, err = validUnprocessed(ctx, bwb, headSlot, s.isProcessedBlock)
+
+	bwbs, err := validUnprocessed(ctx, bwbs, headSlot, s.isProcessedBlock)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "validating unprocessed blocks")
 	}
-	if len(bwb) == 0 {
+
+	if len(bwbs) == 0 {
 		return nil
 	}
 
-	first := bwb[0].Block
+	first := bwbs[0].Block
 	if !s.cfg.Chain.HasBlock(ctx, first.Block().ParentRoot()) {
 		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)",
 			errParentDoesNotExist, first.Block().ParentRoot(), first.Block().Slot())
 	}
-	var aStore das.AvailabilityStore
-	if coreTime.PeerDASIsActive(first.Block().Slot()) {
-		avs := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage)
-		s.logBatchSyncStatus(genesis, first, len(bwb))
-		for _, bb := range bwb {
-			if len(bb.Columns) == 0 {
-				continue
-			}
-			if err := avs.PersistColumns(s.clock.CurrentSlot(), bb.Columns...); err != nil {
-				return err
-			}
-		}
-		aStore = avs
-	} else {
-		bv := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncBlobSidecarRequirements)
-		avs := das.NewLazilyPersistentStore(s.cfg.BlobStorage, bv)
-		s.logBatchSyncStatus(genesis, first, len(bwb))
-		for _, bb := range bwb {
-			if len(bb.Blobs) == 0 {
-				continue
-			}
-			if err := avs.Persist(s.clock.CurrentSlot(), bb.Blobs...); err != nil {
-				return err
-			}
-		}
-		aStore = avs
+
+	// Compute the first electra slot.
+	firstElectraSlot, err := slots.EpochStart(params.BeaconConfig().ElectraForkEpoch)
+	if err != nil {
+		firstElectraSlot = math.MaxUint64
 	}
-	return bFunc(ctx, blocks.BlockWithROBlobsSlice(bwb).ROBlocks(), aStore)
+
+	// Find the first block with a slot greater than or equal to the first electra slot.
+	// (Blocks are sorted by slot)
+	firstElectraIndex := sort.Search(len(bwbs), func(i int) bool {
+		return bwbs[i].Block.Block().Slot() >= firstElectraSlot
+	})
+
+	preElectraBwbs := bwbs[:firstElectraIndex]
+	postElectraBwbs := bwbs[firstElectraIndex:]
+
+	batchVerifier := verification.NewBlobBatchVerifier(s.newBlobVerifier, verification.InitsyncBlobSidecarRequirements)
+	persistentStore := das.NewLazilyPersistentStore(s.cfg.BlobStorage, batchVerifier)
+	s.logBatchSyncStatus(genesis, first, len(preElectraBwbs))
+
+	for _, bwb := range preElectraBwbs {
+		if len(bwb.Blobs) == 0 {
+			continue
+		}
+
+		if err := persistentStore.Persist(s.clock.CurrentSlot(), bwb.Blobs...); err != nil {
+			return err
+		}
+	}
+
+	if err := bFunc(ctx, blocks.BlockWithROBlobsSlice(preElectraBwbs).ROBlocks(), persistentStore); err != nil {
+		return errors.Wrap(err, "process pre-electra blocks")
+	}
+
+	persistentStoreColumn := das.NewLazilyPersistentStoreColumn(s.cfg.BlobStorage)
+	s.logBatchSyncStatus(genesis, first, len(postElectraBwbs))
+	for _, bwb := range postElectraBwbs {
+		if len(bwb.Columns) == 0 {
+			continue
+		}
+
+		if err := persistentStoreColumn.PersistColumns(s.clock.CurrentSlot(), bwb.Columns...); err != nil {
+			return err
+		}
+	}
+
+	if err := bFunc(ctx, blocks.BlockWithROBlobsSlice(postElectraBwbs).ROBlocks(), persistentStoreColumn); err != nil {
+		return errors.Wrap(err, "process post-electra blocks")
+	}
+
+	return nil
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.
@@ -424,11 +479,13 @@ func (s *Service) isProcessedBlock(ctx context.Context, blk blocks.ROBlock) bool
 	// If block is before our finalized checkpoint
 	// we do not process it.
 	if blk.Block().Slot() <= finalizedSlot {
+		log.WithFields(logrus.Fields{"blockSlot": blk.Block().Slot(), "finalizedSlot": finalizedSlot}).Debug("AAAAAAAAAAAA")
 		return true
 	}
 	// If block exists in our db and is before or equal to our current head
 	// we ignore it.
 	if s.cfg.Chain.HeadSlot() >= blk.Block().Slot() && s.cfg.Chain.HasBlock(ctx, blk.Root()) {
+		log.WithFields(logrus.Fields{"blockSlot": blk.Block().Slot(), "headSlot": s.cfg.Chain.HeadSlot(), "hasBlock": s.cfg.Chain.HasBlock(ctx, blk.Root()), "blockRoot": blk.Root()}).Debug("BBBBBBBBBB")
 		return true
 	}
 	return false

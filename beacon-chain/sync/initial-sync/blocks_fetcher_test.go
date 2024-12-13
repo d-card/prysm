@@ -1713,7 +1713,7 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 
 		// Fork epochs.
 		denebForkEpoch   primitives.Epoch
-		eip7954ForkEpoch primitives.Epoch
+		electraForkEpoch primitives.Epoch
 
 		// Current slot.
 		currentSlot uint64
@@ -1753,29 +1753,29 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 			isError:            false,
 		},
 		{
-			name:             "All blocks are before EIP-7954 fork epoch",
+			name:             "All blocks are before Electra fork epoch",
 			denebForkEpoch:   0,
-			eip7954ForkEpoch: 1,
+			electraForkEpoch: 1,
 			currentSlot:      40,
 			blocksParams: []blockParams{
-				{slot: 25, hasBlobs: false}, // Before EIP-7954 fork epoch
-				{slot: 26, hasBlobs: false}, // Before EIP-7954 fork epoch
-				{slot: 27, hasBlobs: false}, // Before EIP-7954 fork epoch
-				{slot: 28, hasBlobs: false}, // Before EIP-7954 fork epoch
+				{slot: 25, hasBlobs: false}, // Before Electra fork epoch
+				{slot: 26, hasBlobs: false}, // Before Electra fork epoch
+				{slot: 27, hasBlobs: false}, // Before Electra fork epoch
+				{slot: 28, hasBlobs: false}, // Before Electra fork epoch
 			},
 			batchSize:          32,
 			addedRODataColumns: [][]int{nil, nil, nil, nil},
 			isError:            false,
 		},
 		{
-			name:             "All blocks with commitments before are EIP-7954 fork epoch",
+			name:             "All blocks with commitments before are Electra fork epoch",
 			denebForkEpoch:   0,
-			eip7954ForkEpoch: 1,
+			electraForkEpoch: 1,
 			currentSlot:      40,
 			blocksParams: []blockParams{
-				{slot: 25, hasBlobs: false}, // Before EIP-7954 fork epoch
-				{slot: 26, hasBlobs: true},  // Before EIP-7954 fork epoch
-				{slot: 27, hasBlobs: true},  // Before EIP-7954 fork epoch
+				{slot: 25, hasBlobs: false}, // Before Electra fork epoch
+				{slot: 26, hasBlobs: true},  // Before Electra fork epoch
+				{slot: 27, hasBlobs: true},  // Before Electra fork epoch
 				{slot: 32, hasBlobs: false},
 				{slot: 33, hasBlobs: false},
 			},
@@ -1785,12 +1785,12 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 		{
 			name:             "Some blocks with blobs but without any missing data columns",
 			denebForkEpoch:   0,
-			eip7954ForkEpoch: 1,
+			electraForkEpoch: 1,
 			currentSlot:      40,
 			blocksParams: []blockParams{
-				{slot: 25, hasBlobs: false}, // Before EIP-7954 fork epoch
-				{slot: 26, hasBlobs: true},  // Before EIP-7954 fork epoch
-				{slot: 27, hasBlobs: true},  // Before EIP-7954 fork epoch
+				{slot: 25, hasBlobs: false}, // Before Electra fork epoch
+				{slot: 26, hasBlobs: true},  // Before Electra fork epoch
+				{slot: 27, hasBlobs: true},  // Before Electra fork epoch
 				{slot: 32, hasBlobs: false},
 				{slot: 33, hasBlobs: true},
 			},
@@ -1808,11 +1808,11 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 		{
 			name:             "Some blocks with blobs with missing data columns - one round needed",
 			denebForkEpoch:   0,
-			eip7954ForkEpoch: 1,
+			electraForkEpoch: 1,
 			currentSlot:      40,
 			blocksParams: []blockParams{
-				{slot: 25, hasBlobs: false}, // Before EIP-7954 fork epoch
-				{slot: 27, hasBlobs: true},  // Before EIP-7954 fork epoch
+				{slot: 25, hasBlobs: false}, // Before Electra fork epoch
+				{slot: 27, hasBlobs: true},  // Before Electra fork epoch
 				{slot: 32, hasBlobs: false},
 				{slot: 33, hasBlobs: true},
 				{slot: 34, hasBlobs: true},
@@ -1916,7 +1916,7 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 		{
 			name:             "Some blocks with blobs with missing data columns - partial responses",
 			denebForkEpoch:   0,
-			eip7954ForkEpoch: 1,
+			electraForkEpoch: 1,
 			currentSlot:      40,
 			blocksParams: []blockParams{
 				{slot: 33, hasBlobs: true},
@@ -1970,7 +1970,7 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 		{
 			name:             "Some blocks with blobs with missing data columns - first response is invalid",
 			denebForkEpoch:   0,
-			eip7954ForkEpoch: 1,
+			electraForkEpoch: 1,
 			currentSlot:      40,
 			blocksParams: []blockParams{
 				{slot: 38, hasBlobs: true},
@@ -2004,7 +2004,7 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 		{
 			name:              "Some blocks with blobs with missing data columns - first response is empty",
 			denebForkEpoch:    0,
-			eip7954ForkEpoch:  1,
+			electraForkEpoch:  1,
 			currentSlot:       40,
 			blocksParams:      []blockParams{{slot: 38, hasBlobs: true}},
 			storedDataColumns: []map[int]bool{{38: true, 102: true}},
@@ -2033,7 +2033,7 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 		{
 			name:              "Some blocks with blobs with missing data columns - no response at all",
 			denebForkEpoch:    0,
-			eip7954ForkEpoch:  1,
+			electraForkEpoch:  1,
 			currentSlot:       40,
 			blocksParams:      []blockParams{{slot: 38, hasBlobs: true}},
 			storedDataColumns: []map[int]bool{{38: true, 102: true}},
@@ -2056,7 +2056,7 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 		{
 			name:             "Some blocks with blobs with missing data columns - request has to be split",
 			denebForkEpoch:   0,
-			eip7954ForkEpoch: 1,
+			electraForkEpoch: 1,
 			currentSlot:      40,
 			blocksParams: []blockParams{
 				{slot: 32, hasBlobs: true}, {slot: 33, hasBlobs: true}, {slot: 34, hasBlobs: true}, {slot: 35, hasBlobs: true}, // 4
@@ -2176,8 +2176,8 @@ func TestFetchDataColumnsFromPeers(t *testing.T) {
 			// Set the Deneb fork epoch.
 			params.BeaconConfig().DenebForkEpoch = tc.denebForkEpoch
 
-			// Set the EIP-7594 fork epoch.
-			params.BeaconConfig().Eip7594ForkEpoch = tc.eip7954ForkEpoch
+			// Set the Electra fork epoch.
+			params.BeaconConfig().ElectraForkEpoch = tc.electraForkEpoch
 
 			// Save the blocks in the store.
 			storage := make(map[[fieldparams.RootLength]byte][]int)
