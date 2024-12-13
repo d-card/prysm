@@ -5,8 +5,6 @@ import (
 )
 
 type Store struct {
-	// lcFinalityUpdateLock   sync.Mutex
-	LastLCFinalityUpdate interfaces.LightClientFinalityUpdate
-	// lcOptimisticUpdateLock sync.Mutex
+	LastLCFinalityUpdate   interfaces.LightClientFinalityUpdate
 	LastLCOptimisticUpdate interfaces.LightClientOptimisticUpdate
 }

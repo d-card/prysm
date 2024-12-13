@@ -47,7 +47,6 @@ type LightClientUpdate interface {
 	NextSyncCommitteeBranch() (LightClientSyncCommitteeBranch, error)
 	SetNextSyncCommitteeBranch(branch [][]byte) error
 	NextSyncCommitteeBranchElectra() (LightClientSyncCommitteeBranchElectra, error)
-	SetNextSyncCommitteeBranchElectra(branch [][]byte) error
 	FinalizedHeader() LightClientHeader
 	SetFinalizedHeader(header LightClientHeader) error
 	FinalityBranch() (LightClientFinalityBranch, error)
