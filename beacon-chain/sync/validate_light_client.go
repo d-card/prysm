@@ -74,7 +74,7 @@ func (s *Service) validateLightClientFinalityUpdate(ctx context.Context, pid pee
 		return pubsub.ValidationIgnore, nil
 	}
 
-	msg.ValidatorData = update
+	msg.ValidatorData = update.Proto()
 
 	return pubsub.ValidationAccept, nil
 }
@@ -126,7 +126,7 @@ func (s *Service) validateLightClientOptimisticUpdate(ctx context.Context, pid p
 		return pubsub.ValidationIgnore, nil
 	}
 
-	msg.ValidatorData = update
+	msg.ValidatorData = update.Proto()
 
 	return pubsub.ValidationAccept, nil
 }
