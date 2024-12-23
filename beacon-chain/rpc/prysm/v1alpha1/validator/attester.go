@@ -71,10 +71,7 @@ func (vs *Server) ProposeAttestationElectra(ctx context.Context, att *ethpb.Sing
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get target state")
 	}
-	committeeIndex, err := att.GetCommitteeIndex()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get committee index")
-	}
+	committeeIndex := att.GetCommitteeIndex()
 	committee, err := helpers.BeaconCommitteeFromState(ctx, targetState, att.Data.Slot, committeeIndex)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get committee")

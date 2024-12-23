@@ -1,9 +1,6 @@
 package eth
 
 import (
-	"fmt"
-
-	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -25,7 +22,7 @@ type Att interface {
 	GetData() *AttestationData
 	CommitteeBitsVal() bitfield.Bitfield
 	GetSignature() []byte
-	GetCommitteeIndex() (primitives.CommitteeIndex, error)
+	GetCommitteeIndex() primitives.CommitteeIndex
 	IsNil() bool
 	IsSingle() bool
 }
@@ -150,11 +147,11 @@ func (a *Attestation) CommitteeBitsVal() bitfield.Bitfield {
 }
 
 // GetCommitteeIndex --
-func (a *Attestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+func (a *Attestation) GetCommitteeIndex() primitives.CommitteeIndex {
 	if a == nil || a.Data == nil {
-		return 0, errors.New("nil attestation data")
+		return 0
 	}
-	return a.Data.CommitteeIndex, nil
+	return a.Data.CommitteeIndex
 }
 
 // Version --
@@ -206,11 +203,11 @@ func (a *PendingAttestation) GetSignature() []byte {
 }
 
 // GetCommitteeIndex --
-func (a *PendingAttestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
+func (a *PendingAttestation) GetCommitteeIndex() primitives.CommitteeIndex {
 	if a == nil || a.Data == nil {
-		return 0, errors.New("nil attestation data")
+		return 0
 	}
-	return a.Data.CommitteeIndex, nil
+	return a.Data.CommitteeIndex
 }
 
 // Version --
@@ -257,18 +254,15 @@ func (a *AttestationElectra) CommitteeBitsVal() bitfield.Bitfield {
 }
 
 // GetCommitteeIndex --
-func (a *AttestationElectra) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
-	if a == nil || a.Data == nil {
-		return 0, errors.New("nil attestation data")
-	}
+func (a *AttestationElectra) GetCommitteeIndex() primitives.CommitteeIndex {
 	if len(a.CommitteeBits) == 0 {
-		return 0, errors.New("no committee bits found in attestation")
+		return 0
 	}
 	indices := a.CommitteeBits.BitIndices()
-	if len(indices) != 1 {
-		return 0, fmt.Errorf("exactly 1 committee index must be set but %d were set", len(indices))
+	if len(indices) == 0 {
+		return 0
 	}
-	return primitives.CommitteeIndex(uint64(indices[0])), nil
+	return primitives.CommitteeIndex(uint64(indices[0]))
 }
 
 // Version --
@@ -322,8 +316,8 @@ func (a *SingleAttestation) GetAggregationBits() bitfield.Bitlist {
 }
 
 // GetCommitteeIndex --
-func (a *SingleAttestation) GetCommitteeIndex() (primitives.CommitteeIndex, error) {
-	return a.CommitteeId, nil
+func (a *SingleAttestation) GetCommitteeIndex() primitives.CommitteeIndex {
+	return a.CommitteeId
 }
 
 // ToAttestationElectra converts the attestation to an AttestationElectra.
@@ -495,6 +489,21 @@ func (a *AggregateAttestationAndProofElectra) AggregateVal() Att {
 }
 
 // Version --
+func (a *AggregateAttestationAndProofSingle) Version() int {
+	return version.Electra
+}
+
+// IsNil --
+func (a *AggregateAttestationAndProofSingle) IsNil() bool {
+	return a == nil || a.Aggregate == nil || a.Aggregate.IsNil()
+}
+
+// AggregateVal --
+func (a *AggregateAttestationAndProofSingle) AggregateVal() Att {
+	return a.Aggregate
+}
+
+// Version --
 func (a *SignedAggregateAttestationAndProof) Version() int {
 	return version.Phase0
 }
@@ -521,5 +530,20 @@ func (a *SignedAggregateAttestationAndProofElectra) IsNil() bool {
 
 // AggregateAttestationAndProof --
 func (a *SignedAggregateAttestationAndProofElectra) AggregateAttestationAndProof() AggregateAttAndProof {
+	return a.Message
+}
+
+// Version --
+func (a *SignedAggregateAttestationAndProofSingle) Version() int {
+	return version.Electra
+}
+
+// IsNil --
+func (a *SignedAggregateAttestationAndProofSingle) IsNil() bool {
+	return a == nil || a.Message == nil || a.Message.IsNil()
+}
+
+// AggregateAttestationAndProof --
+func (a *SignedAggregateAttestationAndProofSingle) AggregateAttestationAndProof() AggregateAttAndProof {
 	return a.Message
 }

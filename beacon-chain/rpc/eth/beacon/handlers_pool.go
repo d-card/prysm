@@ -336,11 +336,7 @@ func (s *Server) handleAttestationsElectra(
 			failedBroadcasts = append(failedBroadcasts, strconv.Itoa(i))
 			continue
 		}
-		committeeIndex, err := att.GetCommitteeIndex()
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to retrieve attestation committee index")
-		}
-		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), committeeIndex, att.Data.Slot)
+		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.GetCommitteeIndex(), att.Data.Slot)
 		if err = s.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
 			log.WithError(err).Errorf("could not broadcast attestation at index %d", i)
 			failedBroadcasts = append(failedBroadcasts, strconv.Itoa(i))
