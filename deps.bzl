@@ -1518,8 +1518,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_holiman_goevmlab",
         importpath = "github.com/holiman/goevmlab",
-        sum = "h1:d9ScqN7uED60MojZ00NaCK11ZDArBo/nGVmytabpUvw=",
-        version = "v0.0.0-20241218110714-825896e13d4d",
+        sum = "h1:JHZ8k9n9G9KXIo1qrvK5Cxah6ax5BR0qVTA9bFYl1oM=",
+        version = "v0.0.0-20241121133100-cfa6b078c8c4",
     )
     go_repository(
         name = "com_github_holiman_uint256",
