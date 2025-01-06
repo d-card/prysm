@@ -758,7 +758,7 @@ func modifyExecutionPayload(execPayload engine.ExecutableData, fees *big.Int, pr
 		return &engine.ExecutionPayloadEnvelope{}, err
 	}
 	// TODO: update to include requests for electra
-	return engine.BlockToExecutableData(modifiedBlock, fees, nil /*blobs*/, nil /*requests*/), nil
+	return engine.BlockToExecutableData(modifiedBlock, fees, nil /*blobs*/), nil
 }
 
 // This modifies the provided payload to imprint the builder's extra data
