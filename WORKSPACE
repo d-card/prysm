@@ -406,8 +406,8 @@ load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 go_repository(
     name = "com_github_crate_crypto_go_eth_kzg",
     importpath = "github.com/crate-crypto/go-eth-kzg",
-    sum = "h1:ywfe8ydSxtrPyJfQL+kdC0SxJX0C7C8eVdcLTrdkIiA=",
-    version = "v1.1.0",
+    sum = "h1:9scGv5VDg8SNc8yP6EpNSg35/KcEwg5cOO4PMFY4USk=",
+    version = "v1.1.1-0.20250121235631-6bfeee5d5578",
 )
 
 gazelle_dependencies()
