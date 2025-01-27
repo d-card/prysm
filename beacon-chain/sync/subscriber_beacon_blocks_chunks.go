@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/rlnc"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/chunks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
@@ -23,14 +22,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (s *Service) beaconBlockChunkSubscriber(ctx context.Context, msg proto.Message) error {
-	chunk, err := chunks.NewBlockChunk(msg)
-	if err != nil {
-		return err
-	}
-	if chunk.IsNil() {
-		return chunks.ErrNilObject
-	}
+// beaconBlockChunkSubscriber is a noop since all syncing happens at the validation step
+func (s *Service) beaconBlockChunkSubscriber(_ context.Context, _ proto.Message) error {
 	return nil
 }
 
