@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
@@ -85,27 +84,8 @@ func CreateForkDigest(
 func Fork(
 	targetEpoch primitives.Epoch,
 ) (*ethpb.Fork, error) {
-	currentForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
-	previousForkVersion := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
-	fSchedule := params.BeaconConfig().ForkVersionSchedule
-	sortedForkVersions := SortedForkVersions(fSchedule)
-	forkEpoch := primitives.Epoch(0)
-	for _, forkVersion := range sortedForkVersions {
-		epoch, ok := fSchedule[forkVersion]
-		if !ok {
-			return nil, errors.Errorf("fork version %x doesn't exist in schedule", forkVersion)
-		}
-		if targetEpoch >= epoch {
-			previousForkVersion = currentForkVersion
-			currentForkVersion = forkVersion
-			forkEpoch = epoch
-		}
-	}
-	return &ethpb.Fork{
-		PreviousVersion: previousForkVersion[:],
-		CurrentVersion:  currentForkVersion[:],
-		Epoch:           forkEpoch,
-	}, nil
+	osc := NewOrderedSchedule(params.BeaconConfig())
+	return osc.ForkForEpoch(targetEpoch)
 }
 
 // RetrieveForkDataFromDigest performs the inverse, where it tries to determine the fork version

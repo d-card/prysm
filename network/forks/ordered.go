@@ -37,6 +37,24 @@ func (o OrderedSchedule) Less(i, j int) bool {
 	return o[i].Epoch < o[j].Epoch
 }
 
+// ForkForEpoch returns the Fork object for the given epoch
+func (o OrderedSchedule) ForkForEpoch(epoch primitives.Epoch) (*ethpb.Fork, error) {
+	ret := &ethpb.Fork{}
+	for i := len(o) - 1; i >= 0; i-- {
+		if o[i].Epoch <= epoch {
+			ret.Epoch = o[i].Epoch
+			ret.CurrentVersion = o[i].Version[:]
+			prev, err := o.Previous(o[i].Version)
+			if err != nil {
+				return nil, err
+			}
+			ret.PreviousVersion = prev[:]
+			return ret, nil
+		}
+	}
+	return nil, errors.Wrapf(ErrVersionNotFound, "no epoch in list <= %d", epoch)
+}
+
 // VersionForEpoch finds the Version with the highest epoch <= the given epoch
 func (o OrderedSchedule) VersionForEpoch(epoch primitives.Epoch) ([fieldparams.VersionLength]byte, error) {
 	for i := len(o) - 1; i >= 0; i-- {
