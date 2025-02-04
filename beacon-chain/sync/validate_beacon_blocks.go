@@ -342,17 +342,18 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	if err != nil {
 		return err
 	}
-	payload, err := body.Execution()
-	if err != nil {
-		return err
+	if body.Version() < version.EPBS {
+		payload, err := body.Execution()
+		if err != nil {
+			return err
+		}
+		if payload == nil || payload.IsNil() {
+			return errors.New("execution payload is nil")
+		}
+		if payload.Timestamp() != uint64(t.Unix()) {
+			return errors.New("incorrect timestamp")
+		}
 	}
-	if payload == nil || payload.IsNil() {
-		return errors.New("execution payload is nil")
-	}
-	if payload.Timestamp() != uint64(t.Unix()) {
-		return errors.New("incorrect timestamp")
-	}
-
 	isParentOptimistic, err := s.cfg.chain.IsOptimisticForRoot(ctx, blk.ParentRoot())
 	if err != nil {
 		return err
