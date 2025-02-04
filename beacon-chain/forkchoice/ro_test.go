@@ -309,3 +309,7 @@ func (ro *mockROForkchoice) GetPTCVote() primitives.PTCStatus {
 	ro.calls = append(ro.calls, getPTCVoteCalled)
 	return primitives.PAYLOAD_ABSENT
 }
+
+func (ro *mockROForkchoice) HashForBlockRoot(_ [32]byte) [32]byte {
+	return [32]byte{}
+}
