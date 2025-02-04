@@ -48,37 +48,34 @@ func (p *PoolService) run() {
 		return
 	}
 
-	electraSlot, err := slots.EpochStart(params.BeaconConfig().ElectraForkEpoch)
-	if err != nil {
-		log.WithError(err).Error("Could not get Electra start slot")
+	// if Electra has not been scheduled return
+	if params.BeaconConfig().ElectraForkEpoch == params.BeaconConfig().FarFutureEpoch {
 		return
 	}
 
 	// If run() is executed after the transition to Electra has already happened,
 	// there is nothing to convert because the slashing pool is empty at startup.
-	if p.currentSlotFn() >= electraSlot {
+	if slots.ToEpoch(p.currentSlotFn()) >= params.BeaconConfig().ElectraForkEpoch {
 		return
 	}
 
 	p.waitForChainInitialization()
 
-	electraTime, err := slots.ToTime(uint64(p.clock.GenesisTime().Unix()), electraSlot)
-	if err != nil {
-		log.WithError(err).Error("Could not get Electra start time")
-		return
-	}
+	ticker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	defer ticker.Stop()
 
-	t := time.NewTimer(electraTime.Sub(p.clock.Now()))
-	defer t.Stop()
-
-	select {
-	case <-t.C:
-		log.Info("Converting Phase0 slashings to Electra slashings")
-		p.poolManager.ConvertToElectra()
-		return
-	case <-p.ctx.Done():
-		log.Warn("Context cancelled, ConvertToElectra timer will not execute")
-		return
+	for {
+		select {
+		case <-p.ctx.Done():
+			log.Warning("Context cancelled, ConvertToElectra aborted")
+			return
+		case <-ticker.C:
+			if slots.ToEpoch(p.currentSlotFn()) >= params.BeaconConfig().ElectraForkEpoch {
+				log.Info("Converting Phase0 slashings to Electra slashings")
+				p.poolManager.ConvertToElectra()
+				return
+			}
+		}
 	}
 }
 
