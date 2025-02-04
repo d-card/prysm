@@ -502,7 +502,25 @@ func (vs *Server) GetFeeRecipientByPubKey(ctx context.Context, request *ethpb.Fe
 // computeStateRoot computes the state root after a block has been processed through a state transition and
 // returns it to the validator client.
 func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
-	beaconState, err := vs.StateGen.StateByRoot(ctx, block.Block().ParentRoot())
+	parentRoot := block.Block().ParentRoot()
+
+	if block.Version() >= version.EPBS {
+		parentHash := vs.ForkchoiceFetcher.HashForBlockRoot(parentRoot)
+		signedBid, err := block.Block().Body().SignedExecutionPayloadHeader()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get signed execution payload header")
+		}
+		bid, err := signedBid.Header()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get execution payload header")
+		}
+		if parentHash == bid.BlockHash() {
+			// It's based on full, use the state by hash
+			parentRoot = parentHash
+		}
+	}
+
+	beaconState, err := vs.StateGen.StateByRoot(ctx, parentRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve beacon state")
 	}

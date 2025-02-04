@@ -102,6 +102,13 @@ func (s *Service) ParentRoot(root [32]byte) ([32]byte, error) {
 	return s.cfg.ForkChoiceStore.ParentRoot(root)
 }
 
+// HashForBlockRoot wraps a call to the corresponding method in forkchoice
+func (s *Service) HashForBlockRoot(root [32]byte) [32]byte {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.HashForBlockRoot(root)
+}
+
 // GetPTCVote wraps a call to the corresponding method in forkchoice and checks
 // the currently syncing status
 // Warning: this method will return the current PTC status regardless of

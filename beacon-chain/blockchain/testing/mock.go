@@ -726,3 +726,7 @@ func (c *ChainService) ReceivePayloadAttestationMessage(_ context.Context, _ *et
 func (c *ChainService) GetPTCVote(root [32]byte) primitives.PTCStatus {
 	return c.PayloadStatus
 }
+
+func (c *ChainService) HashForBlockRoot(root [32]byte) [32]byte {
+	return root
+}

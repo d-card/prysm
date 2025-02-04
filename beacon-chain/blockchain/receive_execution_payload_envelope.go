@@ -126,6 +126,15 @@ func (s *Service) ReceiveExecutionPayloadEnvelope(ctx context.Context, signed in
 	}
 	timeWithoutDaWait := time.Since(receivedTime) - daWaitedTime
 	executionEngineProcessingTime.Observe(float64(timeWithoutDaWait.Milliseconds()))
+	ex, err := envelope.Execution()
+	if err != nil {
+		return errors.Wrap(err, "could not get execution data")
+	}
+	log.WithFields(logrus.Fields{
+		"slot":      envelope.Slot(),
+		"blockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(root[:])),
+		"blockHash": fmt.Sprintf("%#x", bytesutil.Trunc(ex.BlockHash())),
+	}).Info("Processed execution payload envelope")
 	return nil
 }
 
