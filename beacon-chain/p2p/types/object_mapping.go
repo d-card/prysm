@@ -33,6 +33,15 @@ var (
 	// AggregateAttestationMap maps the fork-version to the underlying data type for that
 	// particular fork period.
 	AggregateAttestationMap map[[4]byte]func() (ethpb.SignedAggregateAttAndProof, error)
+	// SignedExecutionPayloadHeaderMap maps the fork-version to the underlying data type for that
+	// particular fork period.
+	SignedExecutionPayloadHeaderMap map[[4]byte]func() (*enginev1.SignedExecutionPayloadHeader, error)
+	// SignedExecutionPayloadEnvelopeMap maps the fork-version to the underlying data type for that
+	// particular fork period.
+	SignedExecutionPayloadEnvelopeMap map[[4]byte]func() (*enginev1.SignedExecutionPayloadEnvelope, error)
+	// PayloadAttestationMap maps the fork-version to the underlying data type for that
+	// particular fork period.
+	PayloadAttestationMap map[[4]byte]func() (*ethpb.PayloadAttestationMessage, error)
 )
 
 // InitializeDataMaps initializes all the relevant object maps. This function is called to
@@ -75,6 +84,11 @@ func InitializeDataMaps() {
 				&ethpb.SignedBeaconBlockFulu{Block: &ethpb.BeaconBlockFulu{Body: &ethpb.BeaconBlockBodyFulu{ExecutionPayload: &enginev1.ExecutionPayloadDeneb{}}}},
 			)
 		},
+		bytesutil.ToBytes4(params.BeaconConfig().EPBSForkVersion): func() (interfaces.ReadOnlySignedBeaconBlock, error) {
+			return blocks.NewSignedBeaconBlock(
+				&ethpb.SignedBeaconBlockEpbs{Block: &ethpb.BeaconBlockEpbs{Body: &ethpb.BeaconBlockBodyEpbs{}}},
+			)
+		},
 	}
 
 	// Reset our metadata map.
@@ -98,6 +112,9 @@ func InitializeDataMaps() {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{}), nil
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().FuluForkVersion): func() (metadata.Metadata, error) {
+			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{}), nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().EPBSForkVersion): func() (metadata.Metadata, error) {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{}), nil
 		},
 	}
@@ -125,6 +142,9 @@ func InitializeDataMaps() {
 		bytesutil.ToBytes4(params.BeaconConfig().FuluForkVersion): func() (ethpb.Att, error) {
 			return &ethpb.SingleAttestation{}, nil
 		},
+		bytesutil.ToBytes4(params.BeaconConfig().EPBSForkVersion): func() (ethpb.Att, error) {
+			return &ethpb.SingleAttestation{}, nil
+		},
 	}
 
 	// Reset our aggregate attestation map.
@@ -149,6 +169,30 @@ func InitializeDataMaps() {
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().FuluForkVersion): func() (ethpb.SignedAggregateAttAndProof, error) {
 			return &ethpb.SignedAggregateAttestationAndProofElectra{}, nil
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().EPBSForkVersion): func() (ethpb.SignedAggregateAttAndProof, error) {
+			return &ethpb.SignedAggregateAttestationAndProofElectra{}, nil
+		},
+	}
+
+	// Reset our signed execution payload header map.
+	SignedExecutionPayloadHeaderMap = map[[4]byte]func() (*enginev1.SignedExecutionPayloadHeader, error){
+		bytesutil.ToBytes4(params.BeaconConfig().EPBSForkVersion): func() (*enginev1.SignedExecutionPayloadHeader, error) {
+			return &enginev1.SignedExecutionPayloadHeader{}, nil
+		},
+	}
+
+	// Reset our signed execution payload envelope map.
+	SignedExecutionPayloadEnvelopeMap = map[[4]byte]func() (*enginev1.SignedExecutionPayloadEnvelope, error){
+		bytesutil.ToBytes4(params.BeaconConfig().EPBSForkVersion): func() (*enginev1.SignedExecutionPayloadEnvelope, error) {
+			return &enginev1.SignedExecutionPayloadEnvelope{}, nil
+		},
+	}
+
+	// Reset our payload attestation map.
+	PayloadAttestationMap = map[[4]byte]func() (*ethpb.PayloadAttestationMessage, error){
+		bytesutil.ToBytes4(params.BeaconConfig().EPBSForkVersion): func() (*ethpb.PayloadAttestationMessage, error) {
+			return &ethpb.PayloadAttestationMessage{}, nil
 		},
 	}
 }

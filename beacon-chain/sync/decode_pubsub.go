@@ -87,6 +87,12 @@ func extractValidDataTypeFromTopic(topic string, digest []byte, clock *startup.C
 		return extractDataTypeFromTypeMap(types.AttestationMap, digest, clock)
 	case p2p.AggregateAndProofSubnetTopicFormat:
 		return extractDataTypeFromTypeMap(types.AggregateAttestationMap, digest, clock)
+	case p2p.GossipSignedExecutionPayloadHeader:
+		return extractDataTypeFromTypeMap(types.SignedExecutionPayloadHeaderMap, digest, clock)
+	case p2p.GossipSignedExecutionPayloadEnvelope:
+		return extractDataTypeFromTypeMap(types.SignedExecutionPayloadEnvelopeMap, digest, clock)
+	case p2p.PayloadAttestationMessageTopicFormat:
+		return extractDataTypeFromTypeMap(types.PayloadAttestationMap, digest, clock)
 	}
 	return nil, nil
 }
