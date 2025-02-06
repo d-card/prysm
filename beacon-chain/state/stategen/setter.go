@@ -92,7 +92,12 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 		if err != nil {
 			return err
 		}
-		_, ok, err := s.epochBoundaryStateCache.getByBlockRoot([32]byte(bRoot))
+		_, hasEmptyState, err := s.epochBoundaryStateCache.getByBlockRoot([32]byte(bRoot))
+		if err != nil {
+			return err
+		}
+		bHash := s.fc.HashForBlockRoot([32]byte(bRoot))
+		_, hasFullState, err := s.epochBoundaryStateCache.getByBlockRoot(bHash)
 		if err != nil {
 			return err
 		}
@@ -101,7 +106,7 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 		//
 		// 1) Would indicate that the epoch boundary was skipped due to a missed slot, we
 		// then recover by saving the state at that particular slot here.
-		if !ok {
+		if !hasEmptyState && !hasFullState {
 			// Only recover the state if it is in our hot state cache, otherwise we
 			// simply skip this step.
 			if s.hotStateCache.has([32]byte(bRoot)) {

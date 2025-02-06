@@ -27,6 +27,7 @@ type ForkChoicer interface {
 	AttestationProcessor // to track new attestation for fork choice.
 	Getter               // to retrieve fork choice information.
 	Setter               // to set fork choice information.
+	FastGetter           // to retrieve fork choice information quickly.
 }
 
 // RLocker represents forkchoice's internal RWMutex read-only lock/unlock methods.
