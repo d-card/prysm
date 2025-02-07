@@ -222,65 +222,65 @@ var stateTransitionCommand = &cli.Command{
 			}
 		}
 
-		if blockPath == "" {
-			log.Info("Block path not provided for state transition. " +
-				"Please provide path")
-			reader := bufio.NewReader(os.Stdin)
-			text, err := reader.ReadString('\n')
-			if err != nil {
-				log.Fatal(err)
-			}
-			if text = strings.ReplaceAll(text, "\n", ""); text == "" {
-				log.Fatal("Empty block path given")
-			}
-			blockPath = text
-		}
-		block, err := detectBlock(blockPath)
-		if err != nil {
-			log.Fatal(err)
-		}
-		blkRoot, err := block.Block().HashTreeRoot()
-		if err != nil {
-			log.Fatal(err)
-		}
-		if preStatePath == "" {
-			log.Info("Pre State path not provided for state transition. " +
-				"Please provide path")
-			reader := bufio.NewReader(os.Stdin)
-			text, err := reader.ReadString('\n')
-			if err != nil {
-				log.Fatal(err)
-			}
-			if text = strings.ReplaceAll(text, "\n", ""); text == "" {
-				log.Fatal("Empty state path given")
-			}
-			preStatePath = text
-		}
+		//if blockPath == "" {
+		//	log.Info("Block path not provided for state transition. " +
+		//		"Please provide path")
+		//	reader := bufio.NewReader(os.Stdin)
+		//	text, err := reader.ReadString('\n')
+		//	if err != nil {
+		//		log.Fatal(err)
+		//	}
+		//	if text = strings.ReplaceAll(text, "\n", ""); text == "" {
+		//		log.Fatal("Empty block path given")
+		//	}
+		//	blockPath = text
+		//}
+		//block, err := detectBlock(blockPath)
+		//if err != nil {
+		//	log.Fatal(err)
+		//}
+		//blkRoot, err := block.Block().HashTreeRoot()
+		//if err != nil {
+		//	log.Fatal(err)
+		//}
+		//if preStatePath == "" {
+		//	log.Info("Pre State path not provided for state transition. " +
+		//		"Please provide path")
+		//	reader := bufio.NewReader(os.Stdin)
+		//	text, err := reader.ReadString('\n')
+		//	if err != nil {
+		//		log.Fatal(err)
+		//	}
+		//	if text = strings.ReplaceAll(text, "\n", ""); text == "" {
+		//		log.Fatal("Empty state path given")
+		//	}
+		//	preStatePath = text
+		//}
 		stateObj, err := detectState(preStatePath)
 		if err != nil {
 			log.Fatal(err)
 		}
-		preStateRoot, err := stateObj.HashTreeRoot(context.Background())
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.WithFields(log.Fields{
-			"blockSlot":    fmt.Sprintf("%d", block.Block().Slot()),
-			"preStateSlot": fmt.Sprintf("%d", stateObj.Slot()),
-		}).Infof(
-			"Performing state transition with a block root of %#x and pre state root of %#x",
-			blkRoot,
-			preStateRoot,
-		)
-		postState, err := debugStateTransition(context.Background(), stateObj, block)
-		if err != nil {
-			log.Fatal(err)
-		}
-		postRoot, err := postState.HashTreeRoot(context.Background())
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Infof("Finished state transition with post state root of %#x", postRoot)
+		//preStateRoot, err := stateObj.HashTreeRoot(context.Background())
+		//if err != nil {
+		//	log.Fatal(err)
+		//}
+		//log.WithFields(log.Fields{
+		//	"blockSlot":    fmt.Sprintf("%d", block.Block().Slot()),
+		//	"preStateSlot": fmt.Sprintf("%d", stateObj.Slot()),
+		//}).Infof(
+		//	"Performing state transition with a block root of %#x and pre state root of %#x",
+		//	blkRoot,
+		//	preStateRoot,
+		//)
+		//postState, err := debugStateTransition(context.Background(), stateObj, block)
+		//if err != nil {
+		//	log.Fatal(err)
+		//}
+		//postRoot, err := postState.HashTreeRoot(context.Background())
+		//if err != nil {
+		//	log.Fatal(err)
+		//}
+		//log.Infof("Finished state transition with post state root of %#x", postRoot)
 
 		// Diff the state if a post state is provided.
 		if expectedPostStatePath != "" {
@@ -288,8 +288,8 @@ var stateTransitionCommand = &cli.Command{
 			if err != nil {
 				log.Fatal(err)
 			}
-			if !equality.DeepEqual(expectedState.ToProtoUnsafe(), postState.ToProtoUnsafe()) {
-				diff, _ := messagediff.PrettyDiff(expectedState.ToProtoUnsafe(), postState.ToProtoUnsafe())
+			if !equality.DeepEqual(expectedState.ToProtoUnsafe(), stateObj.ToProtoUnsafe()) {
+				diff, _ := messagediff.PrettyDiff(expectedState.ToProtoUnsafe(), stateObj.ToProtoUnsafe())
 				log.Errorf("Derived state differs from provided post state: %s", diff)
 			}
 		}
@@ -332,13 +332,15 @@ func detectState(fPath string) (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	vu, err := detect.FromState(rawFile)
+
+	st := &ethpb.BeaconStateEPBS{}
+	err = st.UnmarshalSSZ(rawFile)
 	if err != nil {
-		return nil, errors.Wrap(err, "error detecting state from file")
+		return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", "electra")
 	}
-	s, err := vu.UnmarshalBeaconState(rawFile)
+	s, err := state_native.InitializeFromProtoUnsafeEpbs(st)
 	if err != nil {
-		return nil, errors.Wrap(err, "error unmarshalling state")
+		return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", "electra")
 	}
 	return s, nil
 }
@@ -408,24 +410,11 @@ func debugStateTransition(
 ) (state.BeaconState, error) {
 	var err error
 
-	parentRoot := signed.Block().ParentRoot()
-	st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, parentRoot[:], signed.Block().Slot())
-	if err != nil {
-		return st, errors.Wrap(err, "could not process slots")
-	}
-
 	// Execute per block transition.
-	set, st, err := transition.ProcessBlockNoVerifyAnySig(ctx, st, signed)
+	st, err = transition.ExecuteStateTransition(ctx, st, signed)
 	if err != nil {
 		return st, errors.Wrap(err, "could not process block")
 	}
-	var valid bool
-	valid, err = set.VerifyVerbosely()
-	if err != nil {
-		return st, errors.Wrap(err, "could not batch verify signature")
-	}
-	if !valid {
-		return st, errors.New("signature in block failed to verify")
-	}
+
 	return st, nil
 }
