@@ -1421,11 +1421,11 @@ message BeaconBlockBodyEpbs {
 
   // At most MAX_ATTESTER_SLASHINGS.
   repeated AttesterSlashingElectra attester_slashings = 5
-      [ (ethereum.eth.ext.ssz_max) = "2" ];
+      [ (ethereum.eth.ext.ssz_max) = "1" ];
 
   // At most MAX_ATTESTATIONS.
   repeated AttestationElectra attestations = 6
-      [ (ethereum.eth.ext.ssz_max) = "128" ];
+      [ (ethereum.eth.ext.ssz_max) = "8" ];
 
   // At most MAX_DEPOSITS.
   repeated Deposit deposits = 7 [ (ethereum.eth.ext.ssz_max) = "16" ];

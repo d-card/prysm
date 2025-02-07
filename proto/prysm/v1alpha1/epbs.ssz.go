@@ -248,8 +248,8 @@ func (b *BeaconBlockBodyEpbs) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (4) 'AttesterSlashings'
-	if size := len(b.AttesterSlashings); size > 2 {
-		err = ssz.ErrListTooBigFn("--.AttesterSlashings", size, 2)
+	if size := len(b.AttesterSlashings); size > 1 {
+		err = ssz.ErrListTooBigFn("--.AttesterSlashings", size, 1)
 		return
 	}
 	{
@@ -266,8 +266,8 @@ func (b *BeaconBlockBodyEpbs) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (5) 'Attestations'
-	if size := len(b.Attestations); size > 128 {
-		err = ssz.ErrListTooBigFn("--.Attestations", size, 128)
+	if size := len(b.Attestations); size > 8 {
+		err = ssz.ErrListTooBigFn("--.Attestations", size, 8)
 		return
 	}
 	{
@@ -437,7 +437,7 @@ func (b *BeaconBlockBodyEpbs) UnmarshalSSZ(buf []byte) error {
 	// Field (4) 'AttesterSlashings'
 	{
 		buf = tail[o4:o5]
-		num, err := ssz.DecodeDynamicLength(buf, 2)
+		num, err := ssz.DecodeDynamicLength(buf, 1)
 		if err != nil {
 			return err
 		}
@@ -459,7 +459,7 @@ func (b *BeaconBlockBodyEpbs) UnmarshalSSZ(buf []byte) error {
 	// Field (5) 'Attestations'
 	{
 		buf = tail[o5:o6]
-		num, err := ssz.DecodeDynamicLength(buf, 128)
+		num, err := ssz.DecodeDynamicLength(buf, 8)
 		if err != nil {
 			return err
 		}
@@ -634,7 +634,7 @@ func (b *BeaconBlockBodyEpbs) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	{
 		subIndx := hh.Index()
 		num := uint64(len(b.AttesterSlashings))
-		if num > 2 {
+		if num > 1 {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
@@ -643,14 +643,14 @@ func (b *BeaconBlockBodyEpbs) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 				return
 			}
 		}
-		hh.MerkleizeWithMixin(subIndx, num, 2)
+		hh.MerkleizeWithMixin(subIndx, num, 1)
 	}
 
 	// Field (5) 'Attestations'
 	{
 		subIndx := hh.Index()
 		num := uint64(len(b.Attestations))
-		if num > 128 {
+		if num > 8 {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
@@ -659,7 +659,7 @@ func (b *BeaconBlockBodyEpbs) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 				return
 			}
 		}
-		hh.MerkleizeWithMixin(subIndx, num, 128)
+		hh.MerkleizeWithMixin(subIndx, num, 8)
 	}
 
 	// Field (6) 'Deposits'
