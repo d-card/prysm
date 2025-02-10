@@ -42,6 +42,10 @@ func (b *BeaconState) IsParentBlockFull() (bool, error) {
 	}
 
 	headerBlockHash := bytesutil.ToBytes32(b.latestExecutionPayloadHeaderEPBS.BlockHash)
+	// if the header block hash is empty, the parent is from the previous fork
+	if headerBlockHash == [32]byte{} {
+		return true, nil
+	}
 	return headerBlockHash == b.latestBlockHash, nil
 }
 
