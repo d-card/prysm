@@ -5,17 +5,12 @@ import (
 	"os"
 	"path"
 
-	"github.com/prysmaticlabs/prysm/v5/config/features"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 )
 
 // WriteBlockToDisk as a block ssz. Writes to temp directory. Debug!
 func WriteBlockToDisk(block interfaces.ReadOnlySignedBeaconBlock, failed bool) {
-	if !features.Get().WriteSSZStateTransitions {
-		return
-	}
-
 	filename := fmt.Sprintf("beacon_block_%d.ssz", block.Block().Slot())
 	if failed {
 		filename = "failed_" + filename

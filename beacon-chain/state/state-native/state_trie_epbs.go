@@ -67,7 +67,7 @@ func InitializeFromProtoUnsafeEpbs(st *ethpb.BeaconStateEPBS) (*BeaconState, err
 		latestBlockHash:                  bytesutil.ToBytes32(st.LatestBlockHash),
 		latestFullSlot:                   st.LatestFullSlot,
 		latestExecutionPayloadHeaderEPBS: st.LatestExecutionPayloadHeader,
-		lastWithdrawalsRoot:              bytesutil.ToBytes32(st.LastWithdrawalsRoot),
+		latestWithdrawalsRoot:            bytesutil.ToBytes32(st.LatestWithdrawalsRoot),
 
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),

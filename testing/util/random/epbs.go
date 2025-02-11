@@ -281,7 +281,7 @@ func BeaconState(t *testing.T) *ethpb.BeaconStateEPBS {
 			BlobKzgCommitmentsRoot: randomBytes(32, t),
 			GasLimit:               randomUint64(t),
 		},
-		LastWithdrawalsRoot: randomBytes(32, t),
+		LatestWithdrawalsRoot: randomBytes(32, t),
 	}
 }
 

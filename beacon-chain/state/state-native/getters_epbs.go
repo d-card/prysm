@@ -85,5 +85,5 @@ func (b *BeaconState) LastWithdrawalsRoot() ([]byte, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.lastWithdrawalsRoot[:], nil
+	return b.latestWithdrawalsRoot[:], nil
 }

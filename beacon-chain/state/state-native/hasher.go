@@ -349,7 +349,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[types.LatestFullSlot.RealPosition()] = latestFullSlotRoot[:]
 
 		// Last withdrawals root.
-		lastWithdrawalsRoot := state.lastWithdrawalsRoot[:]
+		lastWithdrawalsRoot := state.latestWithdrawalsRoot[:]
 		fieldRoots[types.LastWithdrawalsRoot.RealPosition()] = lastWithdrawalsRoot
 	}
 

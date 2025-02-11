@@ -261,7 +261,7 @@ const (
 	LatestExecutionPayloadHeader
 	LatestExecutionPayloadHeaderCapella
 	LatestExecutionPayloadHeaderDeneb
-	ExecutionPayloadHeader
+	ExecutionPayloadHeader // changed in EIP-7732
 	NextWithdrawalIndex
 	NextWithdrawalValidatorIndex
 	HistoricalSummaries

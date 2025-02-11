@@ -136,9 +136,9 @@ func UpgradeToEIP7732(beaconState state.BeaconState) (state.BeaconState, error) 
 			BlockHash:              make([]byte, 32),
 			BlobKzgCommitmentsRoot: make([]byte, 32),
 		},
-		LatestBlockHash:     payloadHeader.BlockHash(),
-		LatestFullSlot:      beaconState.Slot(),
-		LastWithdrawalsRoot: make([]byte, 32),
+		LatestBlockHash:       payloadHeader.BlockHash(),
+		LatestFullSlot:        beaconState.Slot(),
+		LatestWithdrawalsRoot: make([]byte, 32),
 	}
 
 	post, err := state_native.InitializeFromProtoUnsafeEpbs(s)

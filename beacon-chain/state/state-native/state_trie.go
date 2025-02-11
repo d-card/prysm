@@ -1035,7 +1035,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		earliestConsolidationEpoch:    b.earliestConsolidationEpoch,
 		latestBlockHash:               b.latestBlockHash,
 		latestFullSlot:                b.latestFullSlot,
-		lastWithdrawalsRoot:           b.lastWithdrawalsRoot,
+		latestWithdrawalsRoot:         b.latestWithdrawalsRoot,
 
 		// Large arrays, infrequently changed, constant size.
 		blockRoots:                b.blockRoots,
@@ -1488,7 +1488,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	case types.ExecutionPayloadHeader:
 		return b.latestExecutionPayloadHeaderEPBS.HashTreeRoot()
 	case types.LastWithdrawalsRoot:
-		return b.lastWithdrawalsRoot, nil
+		return b.latestWithdrawalsRoot, nil
 	}
 	return [32]byte{}, errors.New("invalid field index provided")
 }

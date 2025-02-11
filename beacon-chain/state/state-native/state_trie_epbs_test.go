@@ -15,7 +15,7 @@ func Test_InitializeFromProtoEpbs(t *testing.T) {
 	latestBlockHash := st.LatestBlockHash
 	latestFullSlot := st.LatestFullSlot
 	header := st.LatestExecutionPayloadHeader
-	lastWithdrawalsRoot := st.LastWithdrawalsRoot
+	lastWithdrawalsRoot := st.LatestWithdrawalsRoot
 
 	s, err := InitializeFromProtoEpbs(st)
 	require.NoError(t, err)

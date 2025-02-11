@@ -58,13 +58,14 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	defer span.End()
 	var err error
 
-	interop.WriteBlockToDisk(signed, false /* Has the block failed */)
-	interop.WriteStateToDisk(st)
-
 	parentRoot := signed.Block().ParentRoot()
 	st, err = ProcessSlotsUsingNextSlotCache(ctx, st, parentRoot[:], signed.Block().Slot())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not process slots")
+	}
+	var copied state.BeaconState
+	if signed.Version() >= version.EPBS {
+		copied = st.Copy()
 	}
 
 	// Execute per block transition.
@@ -80,6 +81,11 @@ func ExecuteStateTransitionNoVerifyAnySig(
 	}
 	stateRoot := signed.Block().StateRoot()
 	if !bytes.Equal(postStateRoot[:], stateRoot[:]) {
+		interop.WriteStateToDisk(st)
+		if err := copied.SetSlot(st.Slot() - 1); err != nil {
+			log.Error("could not set slot")
+		}
+		interop.WriteStateToDisk(copied)
 		return nil, nil, fmt.Errorf("could not validate state root, wanted: %#x, received: %#x",
 			postStateRoot[:], signed.Block().StateRoot())
 	}

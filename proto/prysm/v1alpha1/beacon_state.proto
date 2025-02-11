@@ -860,5 +860,5 @@ message BeaconStateEPBS {
     (ethereum.eth.ext.cast_type) =
         "github.com/prysmaticlabs/prysm/v5/consensus-types/primitives.Slot"
   ];
-  bytes last_withdrawals_root = 13003 [ (ethereum.eth.ext.ssz_size) = "32" ];
+  bytes latest_withdrawals_root = 13003 [ (ethereum.eth.ext.ssz_size) = "32" ];
 }

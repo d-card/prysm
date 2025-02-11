@@ -303,7 +303,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			LatestBlockHash:               b.latestBlockHash[:],
 			LatestFullSlot:                b.latestFullSlot,
 			LatestExecutionPayloadHeader:  b.latestExecutionPayloadHeaderEPBS,
-			LastWithdrawalsRoot:           b.lastWithdrawalsRoot[:],
+			LatestWithdrawalsRoot:         b.latestWithdrawalsRoot[:],
 		}
 	default:
 		return nil
@@ -330,7 +330,7 @@ func (b *BeaconState) ToProto() interface{} {
 	}
 
 	LatestBlockHashCopy := b.latestBlockHash
-	lastWithdrawalsRootCopy := b.lastWithdrawalsRoot
+	lastWithdrawalsRootCopy := b.latestWithdrawalsRoot
 
 	switch b.version {
 	case version.Phase0:
@@ -595,7 +595,7 @@ func (b *BeaconState) ToProto() interface{} {
 			LatestBlockHash:               LatestBlockHashCopy[:],
 			LatestFullSlot:                b.latestFullSlot,
 			LatestExecutionPayloadHeader:  b.executionPayloadHeaderVal(),
-			LastWithdrawalsRoot:           lastWithdrawalsRootCopy[:],
+			LatestWithdrawalsRoot:         lastWithdrawalsRootCopy[:],
 		}
 	default:
 		return nil

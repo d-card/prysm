@@ -1080,12 +1080,12 @@ func (b *BeaconStateEPBS) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	// Field (38) 'LatestFullSlot'
 	dst = ssz.MarshalUint64(dst, uint64(b.LatestFullSlot))
 
-	// Field (39) 'LastWithdrawalsRoot'
-	if size := len(b.LastWithdrawalsRoot); size != 32 {
-		err = ssz.ErrBytesLengthFn("--.LastWithdrawalsRoot", size, 32)
+	// Field (39) 'LatestWithdrawalsRoot'
+	if size := len(b.LatestWithdrawalsRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.LatestWithdrawalsRoot", size, 32)
 		return
 	}
-	dst = append(dst, b.LastWithdrawalsRoot...)
+	dst = append(dst, b.LatestWithdrawalsRoot...)
 
 	// Field (7) 'HistoricalRoots'
 	if size := len(b.HistoricalRoots); size > 16777216 {
@@ -1430,11 +1430,11 @@ func (b *BeaconStateEPBS) UnmarshalSSZ(buf []byte) error {
 	// Field (38) 'LatestFullSlot'
 	b.LatestFullSlot = github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Slot(ssz.UnmarshallUint64(buf[2736901:2736909]))
 
-	// Field (39) 'LastWithdrawalsRoot'
-	if cap(b.LastWithdrawalsRoot) == 0 {
-		b.LastWithdrawalsRoot = make([]byte, 0, len(buf[2736909:2736941]))
+	// Field (39) 'LatestWithdrawalsRoot'
+	if cap(b.LatestWithdrawalsRoot) == 0 {
+		b.LatestWithdrawalsRoot = make([]byte, 0, len(buf[2736909:2736941]))
 	}
-	b.LastWithdrawalsRoot = append(b.LastWithdrawalsRoot, buf[2736909:2736941]...)
+	b.LatestWithdrawalsRoot = append(b.LatestWithdrawalsRoot, buf[2736909:2736941]...)
 
 	// Field (7) 'HistoricalRoots'
 	{
@@ -1998,12 +1998,12 @@ func (b *BeaconStateEPBS) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	// Field (38) 'LatestFullSlot'
 	hh.PutUint64(uint64(b.LatestFullSlot))
 
-	// Field (39) 'LastWithdrawalsRoot'
-	if size := len(b.LastWithdrawalsRoot); size != 32 {
-		err = ssz.ErrBytesLengthFn("--.LastWithdrawalsRoot", size, 32)
+	// Field (39) 'LatestWithdrawalsRoot'
+	if size := len(b.LatestWithdrawalsRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.LatestWithdrawalsRoot", size, 32)
 		return
 	}
-	hh.PutBytes(b.LastWithdrawalsRoot)
+	hh.PutBytes(b.LatestWithdrawalsRoot)
 
 	hh.Merkleize(indx)
 	return

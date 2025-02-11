@@ -17,7 +17,16 @@ func (b *BeaconState) SetLatestExecutionPayloadHeaderEPBS(h *enginev1.ExecutionP
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.latestExecutionPayloadHeaderEPBS = h
+	b.latestExecutionPayloadHeaderEPBS = &enginev1.ExecutionPayloadHeaderEPBS{
+		ParentBlockHash:        bytesutil.SafeCopyBytes(h.ParentBlockHash),
+		ParentBlockRoot:        bytesutil.SafeCopyBytes(h.ParentBlockRoot),
+		BlockHash:              bytesutil.SafeCopyBytes(h.BlockHash),
+		GasLimit:               h.GasLimit,
+		BuilderIndex:           h.BuilderIndex,
+		Slot:                   h.Slot,
+		Value:                  h.Value,
+		BlobKzgCommitmentsRoot: bytesutil.SafeCopyBytes(h.BlobKzgCommitmentsRoot),
+	}
 	b.markFieldAsDirty(types.ExecutionPayloadHeader)
 
 	return nil
@@ -62,7 +71,7 @@ func (b *BeaconState) SetLastWithdrawalsRoot(r []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.lastWithdrawalsRoot = bytesutil.ToBytes32(r)
+	b.latestWithdrawalsRoot = bytesutil.ToBytes32(r)
 	b.markFieldAsDirty(types.LastWithdrawalsRoot)
 
 	return nil
