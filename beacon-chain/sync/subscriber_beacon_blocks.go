@@ -100,8 +100,8 @@ func (s *Service) reconstructAndBroadcastBlobs(ctx context.Context, block interf
 			blobUnseen = true
 		}
 	}
-	// If all blobs have been seen via gossip, we can
-	// exit the reconstruction routine early as there is nothing to fetch from the EL.
+	// If all blobs have been seen via gossip, we can exit the reconstruction
+	// routine early as there is nothing to fetch from the EL.
 	if !blobUnseen {
 		return
 	}
