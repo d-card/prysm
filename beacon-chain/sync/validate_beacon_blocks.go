@@ -36,11 +36,11 @@ var (
 
 // unknownConsensusOrExecutionParent returns true if the block has an unknown parent for both execution and consensus part of the block.
 func (s *Service) unknownConsensusOrExecutionParent(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) bool {
-	if s.cfg.chain.HasBlock(ctx, blk.Block().ParentRoot()) {
-		return false
+	if !s.cfg.chain.HasBlock(ctx, blk.Block().ParentRoot()) {
+		return true
 	}
 	if blk.Version() < version.EPBS {
-		return true
+		return false
 	}
 	sg, err := blk.Block().Body().SignedExecutionPayloadHeader()
 	if err != nil {
