@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -38,6 +39,10 @@ type EngineClient struct {
 	ErrGetPayload               error
 	BlobSidecars                []blocks.VerifiedROBlob
 	ErrorBlobSidecars           error
+}
+
+func (e *EngineClient) Client() execution.RPCClient {
+	return nil
 }
 
 // NewPayload --

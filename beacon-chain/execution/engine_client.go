@@ -106,6 +106,7 @@ type Reconstructor interface {
 		ctx context.Context, blindedBlocks []interfaces.ReadOnlySignedBeaconBlock,
 	) ([]interfaces.SignedBeaconBlock, error)
 	ReconstructBlobSidecars(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, indices []bool) ([]blocks.VerifiedROBlob, error)
+	Client() RPCClient
 }
 
 // EngineCaller defines a client that can interact with an Ethereum

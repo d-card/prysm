@@ -304,6 +304,39 @@ func BeaconBlockEpbsFromConsensus(b *eth.BeaconBlockEpbs) (*BeaconBlockEpbs, err
 	}, nil
 }
 
+func SignedExecutionPayloadEnvelopeFromConsensus(b *enginev1.SignedExecutionPayloadEnvelope) (*SignedExecutionPayloadEnvelope, error) {
+	payload, err := ExecutionPayloadEnvelopeFromConsensus(b.Message)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedExecutionPayloadEnvelope{
+		Message:   payload,
+		Signature: hexutil.Encode(b.Signature),
+	}, nil
+}
+
+func ExecutionPayloadEnvelopeFromConsensus(b *enginev1.ExecutionPayloadEnvelope) (*ExecutionPayloadEnvelope, error) {
+	payload, err := ExecutionPayloadDenebFromConsensus(b.Payload)
+	if err != nil {
+		return nil, err
+	}
+	committments := make([]string, len(b.BlobKzgCommitments))
+	for i, c := range b.BlobKzgCommitments {
+		committments[i] = hexutil.Encode(c)
+	}
+
+	executionRequests := ExecutionRequestsFromConsensus(b.ExecutionRequests)
+	return &ExecutionPayloadEnvelope{
+		Payload:            payload,
+		ExecutionRequests:  executionRequests,
+		BuilderIndex:       fmt.Sprintf("%d", b.BuilderIndex),
+		BeaconBlockRoot:    hexutil.Encode(b.BeaconBlockRoot),
+		Slot:               fmt.Sprintf("%d", b.Slot),
+		BlobKzgCommitments: committments,
+		StateRoot:          hexutil.Encode(b.StateRoot),
+	}, nil
+}
+
 func SignedBeaconBlockEpbsFromConsensus(b *eth.SignedBeaconBlockEpbs) (*SignedBeaconBlockEpbs, error) {
 	block, err := BeaconBlockEpbsFromConsensus(b.Block)
 	if err != nil {

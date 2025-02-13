@@ -1253,7 +1253,7 @@ func (b *BlindPayloadEnvelope) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BlindPayloadEnvelope object to a target array
 func (b *BlindPayloadEnvelope) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := int(113)
+	offset := int(120)
 
 	// Field (0) 'PayloadRoot'
 	if size := len(b.PayloadRoot); size != 32 {
@@ -1279,12 +1279,12 @@ func (b *BlindPayloadEnvelope) MarshalSSZTo(buf []byte) (dst []byte, err error) 
 	}
 	dst = append(dst, b.BeaconBlockRoot...)
 
-	// Offset (4) 'BlobKzgCommitments'
+	// Field (4) 'Slot'
+	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
+
+	// Offset (5) 'BlobKzgCommitments'
 	dst = ssz.WriteOffset(dst, offset)
 	offset += len(b.BlobKzgCommitments) * 48
-
-	// Field (5) 'PayloadWithheld'
-	dst = ssz.MarshalBool(dst, b.PayloadWithheld)
 
 	// Field (6) 'StateRoot'
 	if size := len(b.StateRoot); size != 32 {
@@ -1298,7 +1298,7 @@ func (b *BlindPayloadEnvelope) MarshalSSZTo(buf []byte) (dst []byte, err error) 
 		return
 	}
 
-	// Field (4) 'BlobKzgCommitments'
+	// Field (5) 'BlobKzgCommitments'
 	if size := len(b.BlobKzgCommitments); size > 4096 {
 		err = ssz.ErrListTooBigFn("--.BlobKzgCommitments", size, 4096)
 		return
@@ -1318,12 +1318,12 @@ func (b *BlindPayloadEnvelope) MarshalSSZTo(buf []byte) (dst []byte, err error) 
 func (b *BlindPayloadEnvelope) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size < 113 {
+	if size < 120 {
 		return ssz.ErrSize
 	}
 
 	tail := buf
-	var o1, o4 uint64
+	var o1, o5 uint64
 
 	// Field (0) 'PayloadRoot'
 	if cap(b.PayloadRoot) == 0 {
@@ -1336,7 +1336,7 @@ func (b *BlindPayloadEnvelope) UnmarshalSSZ(buf []byte) error {
 		return ssz.ErrOffset
 	}
 
-	if o1 != 113 {
+	if o1 != 120 {
 		return ssz.ErrInvalidVariableOffset
 	}
 
@@ -1349,26 +1349,23 @@ func (b *BlindPayloadEnvelope) UnmarshalSSZ(buf []byte) error {
 	}
 	b.BeaconBlockRoot = append(b.BeaconBlockRoot, buf[44:76]...)
 
-	// Offset (4) 'BlobKzgCommitments'
-	if o4 = ssz.ReadOffset(buf[76:80]); o4 > size || o1 > o4 {
-		return ssz.ErrOffset
-	}
+	// Field (4) 'Slot'
+	b.Slot = github_com_prysmaticlabs_prysm_v5_consensus_types_primitives.Slot(ssz.UnmarshallUint64(buf[76:84]))
 
-	// Field (5) 'PayloadWithheld'
-	b.PayloadWithheld, err = ssz.DecodeBool(buf[80:81])
-	if err != nil {
-		return err
+	// Offset (5) 'BlobKzgCommitments'
+	if o5 = ssz.ReadOffset(buf[84:88]); o5 > size || o1 > o5 {
+		return ssz.ErrOffset
 	}
 
 	// Field (6) 'StateRoot'
 	if cap(b.StateRoot) == 0 {
-		b.StateRoot = make([]byte, 0, len(buf[81:113]))
+		b.StateRoot = make([]byte, 0, len(buf[88:120]))
 	}
-	b.StateRoot = append(b.StateRoot, buf[81:113]...)
+	b.StateRoot = append(b.StateRoot, buf[88:120]...)
 
 	// Field (1) 'ExecutionRequests'
 	{
-		buf = tail[o1:o4]
+		buf = tail[o1:o5]
 		if b.ExecutionRequests == nil {
 			b.ExecutionRequests = new(ExecutionRequests)
 		}
@@ -1377,9 +1374,9 @@ func (b *BlindPayloadEnvelope) UnmarshalSSZ(buf []byte) error {
 		}
 	}
 
-	// Field (4) 'BlobKzgCommitments'
+	// Field (5) 'BlobKzgCommitments'
 	{
-		buf = tail[o4:]
+		buf = tail[o5:]
 		num, err := ssz.DivideInt2(len(buf), 48, 4096)
 		if err != nil {
 			return err
@@ -1397,7 +1394,7 @@ func (b *BlindPayloadEnvelope) UnmarshalSSZ(buf []byte) error {
 
 // SizeSSZ returns the ssz encoded size in bytes for the BlindPayloadEnvelope object
 func (b *BlindPayloadEnvelope) SizeSSZ() (size int) {
-	size = 113
+	size = 120
 
 	// Field (1) 'ExecutionRequests'
 	if b.ExecutionRequests == nil {
@@ -1405,7 +1402,7 @@ func (b *BlindPayloadEnvelope) SizeSSZ() (size int) {
 	}
 	size += b.ExecutionRequests.SizeSSZ()
 
-	// Field (4) 'BlobKzgCommitments'
+	// Field (5) 'BlobKzgCommitments'
 	size += len(b.BlobKzgCommitments) * 48
 
 	return
@@ -1442,7 +1439,10 @@ func (b *BlindPayloadEnvelope) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 	hh.PutBytes(b.BeaconBlockRoot)
 
-	// Field (4) 'BlobKzgCommitments'
+	// Field (4) 'Slot'
+	hh.PutUint64(uint64(b.Slot))
+
+	// Field (5) 'BlobKzgCommitments'
 	{
 		if size := len(b.BlobKzgCommitments); size > 4096 {
 			err = ssz.ErrListTooBigFn("--.BlobKzgCommitments", size, 4096)
@@ -1460,9 +1460,6 @@ func (b *BlindPayloadEnvelope) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		numItems := uint64(len(b.BlobKzgCommitments))
 		hh.MerkleizeWithMixin(subIndx, numItems, 4096)
 	}
-
-	// Field (5) 'PayloadWithheld'
-	hh.PutBool(b.PayloadWithheld)
 
 	// Field (6) 'StateRoot'
 	if size := len(b.StateRoot); size != 32 {

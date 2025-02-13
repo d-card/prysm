@@ -43,6 +43,20 @@ type BeaconBlockBodyEpbs struct {
 	PayloadAttestations          []*PayloadAttestation         `json:"payload_attestations"`
 }
 
+type SignedExecutionPayloadEnvelope struct {
+	Message   *ExecutionPayloadEnvelope `json:"message"`
+	Signature string                    `json:"signature"`
+}
+
+type ExecutionPayloadEnvelope struct {
+	Payload            *ExecutionPayloadDeneb `json:"payload"`
+	ExecutionRequests  *ExecutionRequests     `json:"execution_requests"`
+	BuilderIndex       string                 `json:"builder_index"`
+	BeaconBlockRoot    string                 `json:"beacon_block_root"`
+	Slot               string                 `json:"slot"`
+	BlobKzgCommitments []string               `json:"blob_kzg_commitments"`
+	StateRoot          string                 `json:"state_root"`
+}
 type SignedExecutionPayloadHeader struct {
 	Message   *ExecutionPayloadHeaderEPBS `json:"message"`
 	Signature string                      `json:"signature"`
@@ -69,4 +83,11 @@ type PayloadAttestationData struct {
 	BeaconBlockRoot string `json:"beacon_block_root"`
 	Slot            string `json:"slot"`
 	PayloadStatus   string `json:"payload_status"`
+}
+
+type GetExecutionPayloadV1Response struct {
+	Version             string                          `json:"version"`
+	ExecutionOptimistic bool                            `json:"execution_optimistic"`
+	Finalized           bool                            `json:"finalized"`
+	Data                *SignedExecutionPayloadEnvelope `json:"data"`
 }

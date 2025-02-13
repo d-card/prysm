@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
@@ -17,6 +18,10 @@ type MockBlocker struct {
 	ErrorToReturn error
 	SlotBlockMap  map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock
 	RootBlockMap  map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
+}
+
+func (m *MockBlocker) Payload(_ context.Context, _ execution.RPCClient, _ []byte) (interfaces.ROSignedExecutionPayloadEnvelope, error) {
+	panic("implement me")
 }
 
 // Block --

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "checkpoint.go",
         "client.go",
+        "client_epbs.go",
         "doc.go",
         "health.go",
         "log.go",

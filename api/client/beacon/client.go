@@ -35,6 +35,7 @@ const (
 	getStatePath             = "/eth/v2/debug/beacon/states"
 	getNodeVersionPath       = "/eth/v1/node/version"
 	changeBLStoExecutionPath = "/eth/v1/beacon/pool/bls_to_execution_changes"
+	getPayloadEnvelopePath   = "/eth/v1/beacon/execution_payload"
 )
 
 // StateOrBlockId represents the block_id / state_id parameters that several of the Eth Beacon API methods accept.

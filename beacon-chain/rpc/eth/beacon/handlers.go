@@ -47,6 +47,7 @@ var (
 	errNilBlock         = errors.New("nil block")
 	errEquivocatedBlock = errors.New("block is equivocated")
 	errMarshalSSZ       = errors.New("could not marshal block into SSZ")
+	errNilPayload       = errors.New("nil payload")
 )
 
 // GetBlockV2 retrieves block details for given block ID.
