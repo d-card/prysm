@@ -32,21 +32,17 @@ func (s *Service) executionPayloadByRootRPCHandler(ctx context.Context, msg inte
 	for _, root := range blockRoots {
 		blindPayload, err := s.cfg.beaconDB.SignedBlindPayloadEnvelope(ctx, root[:])
 		if err != nil {
-			log.WithError(err).WithField("root", root).Error("Failed to get payload envelope")
-			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
-			return err
+			continue
 		}
 		if blindPayload == nil {
-			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
-			return errors.New("payload is nil")
+			continue
 		}
 		SetStreamWriteDeadline(stream, defaultWriteDuration)
 
 		constructedPayload, err := s.cfg.executionReconstructor.ReconstructPayloadEnvelope(ctx, blindPayload)
 		if err != nil {
 			log.WithError(err).WithField("root", root).Error("Failed to reconstruct payload envelope")
-			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
-			return err
+			continue
 		}
 
 		if chunkErr := writePayloadChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), constructedPayload); chunkErr != nil {
