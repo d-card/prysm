@@ -382,6 +382,9 @@ func (s *Service) startTasksPostInitialSync() {
 		// Register respective pubsub handlers at state synced event.
 		s.registerSubscribers(currentEpoch, forkDigest)
 
+		// Start the late payload tasks.
+		go s.runLatePayloadTasks()
+
 		// Start the fork watcher.
 		go s.forkWatcher()
 
@@ -415,4 +418,22 @@ type Checker interface {
 	Synced() bool
 	Status() error
 	Resync() error
+}
+
+func (s *Service) runLatePayloadTasks() {
+	ptcThreshold := params.BeaconConfig().SecondsPerSlot * 3 / 4
+	ticker := slots.NewSlotTickerWithOffset(s.cfg.clock.GenesisTime(), time.Duration(ptcThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
+	epbs := params.BeaconConfig().EPBSForkEpoch
+	for {
+		select {
+		case slot := <-ticker.C():
+			if slots.ToEpoch(slot) >= epbs {
+				s.latePayloadTasks(s.ctx)
+			}
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting routine")
+			return
+		}
+	}
+
 }

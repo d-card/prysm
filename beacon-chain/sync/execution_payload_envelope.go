@@ -7,12 +7,14 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	v1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -124,4 +126,24 @@ func (s *Service) executionPayloadEnvelopeSubscriber(ctx context.Context, msg pr
 		return err
 	}
 	return s.cfg.chain.ReceiveExecutionPayloadEnvelope(ctx, env, nil)
+}
+
+func (s *Service) latePayloadTasks(ctx context.Context) {
+	slot, root := s.cfg.chain.HighestReceivedBlockSlotRoot()
+	if slots.ToEpoch(slot) < params.BeaconConfig().EPBSForkEpoch {
+		return
+	}
+	if slot < s.cfg.clock.CurrentSlot() {
+		return
+	}
+	hash := s.cfg.chain.HashForBlockRoot(root)
+	if s.cfg.chain.HashInForkchoice(hash) {
+		return
+	}
+	log.WithFields(logrus.Fields{"blockRoot": fmt.Sprintf("%#x", root), "slot": slot}).Debug("requesting late payload")
+	go func() {
+		if err := s.sendBatchPayloadRequest(context.Background(), [][32]byte{[32]byte(root)}, rand.NewGenerator()); err != nil {
+			log.WithError(err).Error("failed to send batch payload request")
+		}
+	}()
 }
