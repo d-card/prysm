@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v5/network/forks"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
 
@@ -30,7 +31,27 @@ func (s *Service) executionPayloadByRootRPCHandler(ctx context.Context, msg inte
 		return errors.New("no block roots provided")
 	}
 	for _, root := range blockRoots {
-		blindPayload, err := s.cfg.beaconDB.SignedBlindPayloadEnvelope(ctx, root[:])
+		blk, err := s.cfg.beaconDB.Block(ctx, root)
+		if err != nil {
+			log.WithError(err).WithField("root", root).Debug("Failed to retrieve block")
+			continue
+		}
+		if blk.Version() < version.EPBS {
+			log.WithField("root", root).Debug("Block is not epbs")
+			continue
+		}
+		sh, err := blk.Block().Body().SignedExecutionPayloadHeader()
+		if err != nil {
+			log.WithError(err).WithField("root", root).Debug("Failed to retrieve signed payload header")
+			continue
+		}
+		h, err := sh.Header()
+		if err != nil {
+			log.WithError(err).WithField("root", root).Debug("Failed to retrieve header")
+			continue
+		}
+		bh := h.BlockHash()
+		blindPayload, err := s.cfg.beaconDB.SignedBlindPayloadEnvelope(ctx, bh[:])
 		if err != nil {
 			continue
 		}
