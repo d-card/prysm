@@ -69,6 +69,10 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *fcuConfig) (*
 		SafeBlockHash:      justifiedHash[:],
 		FinalizedBlockHash: finalizedHash[:],
 	}
+	if len(fcs.HeadBlockHash) != 32 || [32]byte(fcs.HeadBlockHash) == [32]byte{} {
+		log.Error("Sending nil head block hash to execution engine")
+		return nil, nil
+	}
 	if arg.attributes == nil {
 		arg.attributes = payloadattribute.EmptyWithVersion(headBlk.Version())
 	}
