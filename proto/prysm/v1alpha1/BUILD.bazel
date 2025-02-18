@@ -196,7 +196,6 @@ ssz_epbs_objs = [
 	"BeaconBlockEpbs",
 	"BeaconStateEPBS",
 	"SignedBeaconBlockEpbs",
-	"PayloadAttestationData",
 	"PayloadAttestation",
 	"PayloadAttestationMessage",
 ]

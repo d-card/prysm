@@ -2,7 +2,6 @@ package primitives
 
 import (
 	"fmt"
-	"math"
 
 	fssz "github.com/prysmaticlabs/fastssz"
 )
@@ -14,7 +13,7 @@ var _ fssz.Unmarshaler = (*PTCStatus)(nil)
 // PTCStatus represents a single payload status. These are the
 // possible votes that the Payload Timeliness Committee can cast
 // in ePBS when attesting for an execution payload.
-type PTCStatus uint64
+type PTCStatus uint8
 
 // Defined constants
 const (
@@ -31,9 +30,6 @@ func (s PTCStatus) HashTreeRoot() ([32]byte, error) {
 
 // HashTreeRootWith --
 func (s PTCStatus) HashTreeRootWith(hh *fssz.Hasher) error {
-	if s > math.MaxUint8 {
-		return fmt.Errorf("expected uint8 value, received %d", uint64(s))
-	}
 	hh.PutUint8(uint8(s))
 	return nil
 }
@@ -58,9 +54,6 @@ func (s *PTCStatus) MarshalSSZTo(dst []byte) ([]byte, error) {
 
 // MarshalSSZ --
 func (s *PTCStatus) MarshalSSZ() ([]byte, error) {
-	if *s > math.MaxUint8 {
-		return nil, fmt.Errorf("expected uint8 value, received %d", uint64(*s))
-	}
 	marshalled := fssz.MarshalUint8([]byte{}, uint8(*s))
 	return marshalled, nil
 }
