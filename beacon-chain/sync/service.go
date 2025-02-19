@@ -167,6 +167,7 @@ type Service struct {
 	newBlobVerifier                  verification.NewBlobVerifier
 	newColumnsVerifier               verification.NewDataColumnsVerifier
 	availableBlocker                 coverage.AvailableBlocker
+	trackedValidatorsCache           *cache.TrackedValidatorsCache
 	dataColumsnReconstructionLock    sync.Mutex
 	receivedDataColumnsFromRoot      *gcache.Cache
 	receivedDataColumnsFromRootLock  sync.RWMutex

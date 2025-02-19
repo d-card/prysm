@@ -188,3 +188,11 @@ func WithAvailableBlocker(avb coverage.AvailableBlocker) Option {
 		return nil
 	}
 }
+
+// WithTrackedValidatorsCache for tracked validators cache.
+func WithTrackedValidatorsCache(c *cache.TrackedValidatorsCache) Option {
+	return func(s *Service) error {
+		s.trackedValidatorsCache = c
+		return nil
+	}
+}

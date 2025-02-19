@@ -859,6 +859,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}, bFil
 		regularsync.WithBlobStorage(b.BlobStorage),
 		regularsync.WithVerifierWaiter(b.verifyInitWaiter),
 		regularsync.WithAvailableBlocker(bFillStore),
+		regularsync.WithTrackedValidatorsCache(b.trackedValidatorsCache),
 	)
 	return b.services.RegisterService(rs)
 }
