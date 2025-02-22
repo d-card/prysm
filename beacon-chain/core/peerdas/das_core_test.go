@@ -189,3 +189,56 @@ func TestValidatorsCustodyRequirement(t *testing.T) {
 		})
 	}
 }
+
+func TestCustodyGroupSamplingSize(t *testing.T) {
+	testCases := []struct {
+		name                         string
+		custodyType                  peerdas.CustodyType
+		validatorsCustodyRequirement uint64
+		toAdvertiseCustodyGroupCount uint64
+		expected                     uint64
+	}{
+		{
+			name:                         "target, lower than samples per slot",
+			custodyType:                  peerdas.Target,
+			validatorsCustodyRequirement: 2,
+			expected:                     8,
+		},
+		{
+			name:                         "target, higher than samples per slot",
+			custodyType:                  peerdas.Target,
+			validatorsCustodyRequirement: 100,
+			expected:                     100,
+		},
+		{
+			name:                         "actual, lower than samples per slot",
+			custodyType:                  peerdas.Actual,
+			validatorsCustodyRequirement: 3,
+			toAdvertiseCustodyGroupCount: 4,
+			expected:                     8,
+		},
+		{
+			name:                         "actual, higher than samples per slot",
+			custodyType:                  peerdas.Actual,
+			validatorsCustodyRequirement: 100,
+			toAdvertiseCustodyGroupCount: 101,
+			expected:                     100,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Set the validators custody requirement for target custody group count.
+			peerdas.TargetCustodyGroupCount.SetValidatorsCustodyRequirement(tc.validatorsCustodyRequirement)
+
+			// Set the to advertise custody group count.
+			peerdas.ToAdvertiseCustodyGroupCount.Set(tc.toAdvertiseCustodyGroupCount)
+
+			// Compute the custody group sampling size.
+			actual := peerdas.CustodyGroupSamplingSize(tc.custodyType)
+
+			// Check the result.
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}

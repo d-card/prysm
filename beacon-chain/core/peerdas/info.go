@@ -7,14 +7,28 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
 )
 
 // info contains all useful peerDAS related information regarding a peer.
-type info struct {
-	CustodyGroups      map[uint64]bool
-	CustodyColumns     map[uint64]bool
-	DataColumnsSubnets map[uint64]bool
-}
+type (
+	info struct {
+		CustodyGroups      map[uint64]bool
+		CustodyColumns     map[uint64]bool
+		DataColumnsSubnets map[uint64]bool
+	}
+
+	targetCustodyGroupCount struct {
+		mut                          sync.RWMutex
+		validatorsCustodyRequirement uint64
+	}
+
+	toAdverstiseCustodyGroupCount struct {
+		mut   sync.RWMutex
+		value uint64
+	}
+)
 
 const (
 	nodeInfoCacheSize   = 200
@@ -22,6 +36,18 @@ const (
 )
 
 var (
+	// CustodyGroupCountMut is a mutex to be used by caller to ensure neither
+	// TargetCustodyGroupCount nor ToAdvertiseCustodyGroupCount are being modified.
+	// (This is not necessary to use this mutex for any data protection.)
+	CustodyGroupCountMut sync.RWMutex
+
+	// TargetCustodyGroupCount represents the target number of custody groups we should custody
+	// regarding the validators we are tracking.
+	TargetCustodyGroupCount targetCustodyGroupCount
+
+	// ToAdvertiseCustodyGroupCount represents the number of custody groups to advertise to the network.
+	ToAdvertiseCustodyGroupCount toAdverstiseCustodyGroupCount
+
 	nodeInfoCacheMut sync.Mutex
 	nodeInfoCache    *lru.Cache
 )
@@ -100,4 +126,59 @@ func computeInfoCacheKey(nodeID enode.ID, custodyGroupCount uint64) [nodeInfoCac
 	binary.BigEndian.PutUint64(key[32:], custodyGroupCount)
 
 	return key
+}
+
+// setValidatorsCustodyRequirement sets the validators custody requirement.
+func (tcgc *targetCustodyGroupCount) SetValidatorsCustodyRequirement(value uint64) {
+	tcgc.mut.Lock()
+	defer tcgc.mut.Unlock()
+
+	tcgc.validatorsCustodyRequirement = value
+}
+
+// CustodyGroupCount returns the number of groups we should participate in for custody.
+func (tcgc *targetCustodyGroupCount) Get() uint64 {
+	// If subscribed to all subnets, return the number of custody groups.
+	if flags.Get().SubscribeToAllSubnets {
+		return params.BeaconConfig().NumberOfCustodyGroups
+	}
+
+	tcgc.mut.RLock()
+	defer tcgc.mut.RUnlock()
+
+	// If no validators are tracked, return the default custody requirement.
+	if tcgc.validatorsCustodyRequirement == 0 {
+		return params.BeaconConfig().CustodyRequirement
+	}
+
+	// Return the validators custody requirement.
+	return tcgc.validatorsCustodyRequirement
+}
+
+// Set sets the to advertise custody group count.
+func (tacgc *toAdverstiseCustodyGroupCount) Set(value uint64) {
+	tacgc.mut.Lock()
+	defer tacgc.mut.Unlock()
+
+	tacgc.value = value
+}
+
+// Get returns the to advertise custody group count.
+func (tacgc *toAdverstiseCustodyGroupCount) Get() uint64 {
+	// If subscribed to all subnets, return the number of custody groups.
+	if flags.Get().SubscribeToAllSubnets {
+		return params.BeaconConfig().NumberOfCustodyGroups
+	}
+
+	custodyRequirement := params.BeaconConfig().CustodyRequirement
+
+	tacgc.mut.RLock()
+	defer tacgc.mut.RUnlock()
+
+	return max(tacgc.value, custodyRequirement)
+}
+
+// ActualCustodyGroupCount returns the actual custody group count.
+func ActualCustodyGroupCount() uint64 {
+	return min(TargetCustodyGroupCount.Get(), ToAdvertiseCustodyGroupCount.Get())
 }

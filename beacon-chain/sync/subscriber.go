@@ -592,7 +592,7 @@ func (s *Service) enoughPeersAreConnected(subnetTopic string) bool {
 
 func (s *Service) dataColumnSubnetIndices(_ primitives.Slot) []uint64 {
 	nodeID := s.cfg.p2p.NodeID()
-	custodyGroupCount := peerdas.CustodyGroupSamplingSize()
+	custodyGroupCount := peerdas.CustodyGroupSamplingSize(peerdas.Target)
 
 	nodeInfo, _, err := peerdas.Info(nodeID, custodyGroupCount)
 	if err != nil {

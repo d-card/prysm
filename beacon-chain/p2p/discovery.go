@@ -242,7 +242,7 @@ func (s *Service) RefreshPersistentSubnets() {
 	}
 
 	// Get the current custody group count.
-	custodyGroupCount := peerdas.CustodyGroupCount()
+	custodyGroupCount := peerdas.ActualCustodyGroupCount()
 
 	// Get the custody group count we store in our record.
 	inRecordCustodyGroupCount, err := peerdas.CustodyGroupCountFromRecord(record)
@@ -492,7 +492,7 @@ func (s *Service) createLocalNode(
 	}
 
 	if params.FuluEnabled() {
-		custodyGroupCount := peerdas.CustodyGroupCount()
+		custodyGroupCount := peerdas.ActualCustodyGroupCount()
 		localNode.Set(peerdas.Cgc(custodyGroupCount))
 	}
 

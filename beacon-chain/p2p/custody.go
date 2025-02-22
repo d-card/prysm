@@ -11,13 +11,13 @@ import (
 
 // AdmissibleCustodyGroupsPeers returns a list of peers that custody a super set of the local node's custody groups.
 func (s *Service) AdmissibleCustodyGroupsPeers(peers []peer.ID) ([]peer.ID, error) {
-	localCustodyGroupCount := peerdas.CustodyGroupCount()
+	localCustodyGroupCount := peerdas.ActualCustodyGroupCount()
 	return s.custodyGroupsAdmissiblePeers(peers, localCustodyGroupCount)
 }
 
 // AdmissibleCustodySamplingPeers returns a list of peers that custody a super set of the local node's sampling columns.
 func (s *Service) AdmissibleCustodySamplingPeers(peers []peer.ID) ([]peer.ID, error) {
-	localSubnetSamplingSize := peerdas.CustodyGroupSamplingSize()
+	localSubnetSamplingSize := peerdas.CustodyGroupSamplingSize(peerdas.Actual)
 	return s.custodyGroupsAdmissiblePeers(peers, localSubnetSamplingSize)
 }
 

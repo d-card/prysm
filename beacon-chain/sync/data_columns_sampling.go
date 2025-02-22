@@ -99,7 +99,8 @@ func (d *dataColumnSampler1D) Run(ctx context.Context) {
 	nodeID := d.p2p.NodeID()
 
 	// Verify if we need to run sampling or not, if not, return directly.
-	custodyGroupCount := peerdas.CustodyGroupCount()
+	// TODO: Rework this part to take into account dynamic custody group count with peer sampling.
+	custodyGroupCount := peerdas.ActualCustodyGroupCount()
 
 	// Retrieve our local node info.
 	localNodeInfo, _, err := peerdas.Info(nodeID, custodyGroupCount)

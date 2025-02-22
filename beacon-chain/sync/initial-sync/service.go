@@ -352,7 +352,7 @@ func (s *Service) missingColumnRequest(roBlock blocks.ROBlock, store *filesystem
 	nodeID := s.cfg.P2P.NodeID()
 
 	// Get the custody group count.
-	custodyGroupsCount := peerdas.CustodyGroupCount()
+	custodyGroupsCount := peerdas.ActualCustodyGroupCount()
 
 	// Retrieve the peer info.
 	peerInfo, _, err := peerdas.Info(nodeID, custodyGroupsCount)
@@ -492,7 +492,7 @@ func (s *Service) fetchOriginColumns(pids []peer.ID) error {
 			log.WithField("root", fmt.Sprintf("%#x", r)).WithField("peerID", pids[i]).Warn("Columns from peer for origin block were unusable")
 			continue
 		}
-		log.WithField("nColumns", len(sidecars)).WithField("root", fmt.Sprintf("%#x", r)).Info("Successfully downloaded blobs for checkpoint sync block")
+		log.WithField("nColumns", len(sidecars)).WithField("root", fmt.Sprintf("%#x", r)).Info("Successfully downloaded data columns for checkpoint sync block")
 		return nil
 	}
 	return fmt.Errorf("no connected peer able to provide columns for checkpoint sync block %#x", r)

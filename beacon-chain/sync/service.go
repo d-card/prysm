@@ -266,6 +266,7 @@ func (s *Service) Start() {
 	s.processPendingAttsQueue()
 	s.maintainPeerStatuses()
 	s.resyncIfBehind()
+	go s.maintainValidatorsCustody()
 
 	// Update sync metrics.
 	async.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)

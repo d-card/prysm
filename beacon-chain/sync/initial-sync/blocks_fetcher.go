@@ -771,7 +771,7 @@ func (f *blocksFetcher) custodyColumns() (map[uint64]bool, error) {
 	localNodeID := f.p2p.NodeID()
 
 	// Retrieve the number of groups we should custody.
-	localCustodyGroupCount := peerdas.CustodyGroupCount()
+	localCustodyGroupCount := peerdas.ActualCustodyGroupCount()
 
 	// Retrieve the local node info.
 	localNodeInfo, _, err := peerdas.Info(localNodeID, localCustodyGroupCount)

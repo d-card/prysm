@@ -64,7 +64,7 @@ func (s *LazilyPersistentStoreColumn) PersistColumns(current primitives.Slot, sc
 }
 
 // IsDataAvailable returns nil if all the commitments in the given block are persisted to the db and have been verified.
-// BlobSidecars already in the db are assumed to have been previously verified against the block.
+// DataColumnsSidecars already in the db are assumed to have been previously verified against the block.
 func (s *LazilyPersistentStoreColumn) IsDataAvailable(
 	ctx context.Context,
 	nodeID enode.ID,
@@ -154,7 +154,7 @@ func fullCommitmentsToCheck(nodeID enode.ID, block blocks.ROBlock, currentSlot p
 	}
 
 	// Retrieve the groups count.
-	custodyGroupCount := peerdas.CustodyGroupCount()
+	custodyGroupCount := peerdas.ActualCustodyGroupCount()
 
 	// Retrieve peer info.
 	peerInfo, _, err := peerdas.Info(nodeID, custodyGroupCount)

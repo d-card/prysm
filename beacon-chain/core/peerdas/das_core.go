@@ -32,6 +32,13 @@ var (
 	maxUint256 = &uint256.Int{math.MaxUint64, math.MaxUint64, math.MaxUint64, math.MaxUint64}
 )
 
+type CustodyType int
+
+const (
+	Target CustodyType = iota
+	Actual
+)
+
 // CustodyGroups computes the custody groups the node should participate in for custody.
 // https://github.com/ethereum/consensus-specs/blob/v1.5.0-alpha.10/specs/fulu/das-core.md#get_custody_groups
 func CustodyGroups(nodeId enode.ID, custodyGroupCount uint64) (map[uint64]bool, error) {
@@ -195,10 +202,14 @@ func DataColumnSidecars(signedBlock interfaces.ReadOnlySignedBeaconBlock, blobs 
 
 // CustodyGroupSamplingSize returns the number of custody groups the node should sample from.
 // https://github.com/ethereum/consensus-specs/blob/v1.5.0-alpha.10/specs/fulu/das-core.md#custody-sampling
-func CustodyGroupSamplingSize() uint64 {
-	samplesPerSlot := params.BeaconConfig().SamplesPerSlot
-	custodyGroupCount := CustodyGroupCount()
+func CustodyGroupSamplingSize(ct CustodyType) uint64 {
+	custodyGroupCount := TargetCustodyGroupCount.Get()
 
+	if ct == Actual {
+		custodyGroupCount = ActualCustodyGroupCount()
+	}
+
+	samplesPerSlot := params.BeaconConfig().SamplesPerSlot
 	return max(samplesPerSlot, custodyGroupCount)
 }
 
