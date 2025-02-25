@@ -6,6 +6,7 @@ package sync
 
 import (
 	"context"
+	"encoding/hex"
 	"sync"
 	"time"
 
@@ -331,6 +332,15 @@ func (s *Service) waitForChainStart() {
 func (s *Service) startTasksPostInitialSync() {
 	// Wait for the chain to start.
 	s.waitForChainStart()
+	hexStr := "2db899881ed8546476d0b92c6aa9110bea9a4cd0dbeb5519eb0ea69575f1f359"
+	bytes, err := hex.DecodeString(hexStr)
+	if err != nil {
+		log.WithError(err).Error("Could not decode hex string")
+		return
+	}
+	badRoot := [32]byte(bytes)
+
+	s.setBadBlock(context.Background(), badRoot)
 
 	select {
 	case <-s.initialSyncComplete:
