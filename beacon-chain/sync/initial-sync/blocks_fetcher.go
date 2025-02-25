@@ -2,6 +2,7 @@ package initialsync
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"strings"
@@ -24,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v5/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/math"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
 	p2ppb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -67,6 +69,8 @@ var (
 // Period to calculate expected limit for a single peer.
 var blockLimiterPeriod = 30 * time.Second
 
+type isBannedBlock func(root [32]byte) bool
+
 // blocksFetcherConfig is a config to setup the block fetcher.
 type blocksFetcherConfig struct {
 	clock                    *startup.Clock
@@ -101,6 +105,7 @@ type blocksFetcher struct {
 	capacityWeight  float64       // how remaining capacity affects peer selection
 	mode            syncMode      // allows to use fetcher in different sync scenarios
 	quit            chan struct{} // termination notifier
+	isBannedBlock   isBannedBlock
 }
 
 // peerLock restricts fetcher actions on per peer basis. Currently, used for rate limiting.
@@ -124,6 +129,13 @@ type fetchRequestResponse struct {
 	count uint64
 	bwb   []blocks.BlockWithROBlobs
 	err   error
+}
+
+// set in init()
+var holeskyBadRoot [32]byte
+
+func isHoleskyBannedBlock(root [32]byte) bool {
+	return root == holeskyBadRoot
 }
 
 // newBlocksFetcher creates ready to use fetcher.
@@ -160,6 +172,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		capacityWeight:  capacityWeight,
 		mode:            cfg.mode,
 		quit:            make(chan struct{}),
+		isBannedBlock:   isHoleskyBannedBlock,
 	}
 }
 
@@ -356,6 +369,13 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		if err != nil {
 			log.WithField("peer", p).WithError(err).Debug("invalid BeaconBlocksByRange response")
 			continue
+		}
+		if f.isBannedBlock != nil {
+			for _, b := range robs {
+				if f.isBannedBlock(b.Block.Root()) {
+					return nil, p, prysmsync.ErrInvalidFetchedData
+				}
+			}
 		}
 		return robs, p, err
 	}
@@ -726,4 +746,12 @@ func dedupPeers(peers []peer.ID) []peer.ID {
 		peerExists[peers[i]] = true
 	}
 	return newPeerList
+}
+
+func init() {
+	bytes, err := hex.DecodeString("2db899881ed8546476d0b92c6aa9110bea9a4cd0dbeb5519eb0ea69575f1f359")
+	if err != nil {
+		panic(err)
+	}
+	holeskyBadRoot = bytesutil.ToBytes32(bytes)
 }
