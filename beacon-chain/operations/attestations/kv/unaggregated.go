@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	log "github.com/sirupsen/logrus"
 )
 
 // SaveUnaggregatedAttestation saves an unaggregated attestation in cache.
@@ -60,7 +61,8 @@ func (c *AttCaches) UnaggregatedAttestations() ([]ethpb.Att, error) {
 	for _, att := range unAggregatedAtts {
 		seen, err := c.hasSeenBit(att)
 		if err != nil {
-			return nil, err
+			log.WithError(err).Debug("Could not check if attestations bits have been seen")
+			continue
 		}
 		if !seen {
 			atts = append(atts, att.Clone())
@@ -163,7 +165,11 @@ func (c *AttCaches) DeleteSeenUnaggregatedAttestations() (int, error) {
 		if att == nil || att.IsNil() || att.IsAggregated() {
 			continue
 		}
-		if seen, err := c.hasSeenBit(att); err == nil && seen {
+		seen, err := c.hasSeenBit(att)
+		if err != nil {
+			log.WithError(err).Debug("Could not check if attestations bits have been seen")
+		}
+		if seen {
 			delete(c.unAggregatedAtt, r)
 			count++
 		}
