@@ -185,7 +185,7 @@ func TestFuzzProcessProposerSlashings_10000(t *testing.T) {
 		fuzzer.Fuzz(p)
 		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
 		require.NoError(t, err)
-		r, err := ProcessProposerSlashings(ctx, s, []*ethpb.ProposerSlashing{p}, v.SlashValidator, v.MaxExitEpochAndChurn(s))
+		r, _, err := ProcessProposerSlashings(ctx, s, []*ethpb.ProposerSlashing{p}, v.SlashValidator, v.ExitInformation(s))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and slashing: %v", r, err, state, p)
 		}
@@ -216,7 +216,7 @@ func TestFuzzProcessAttesterSlashings_10000(t *testing.T) {
 		fuzzer.Fuzz(a)
 		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
 		require.NoError(t, err)
-		r, err := ProcessAttesterSlashings(ctx, s, []ethpb.AttSlashing{a}, v.SlashValidator, v.MaxExitEpochAndChurn(s))
+		r, _, err := ProcessAttesterSlashings(ctx, s, []ethpb.AttSlashing{a}, v.SlashValidator, v.ExitInformation(s))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and slashing: %v", r, err, state, a)
 		}
@@ -321,7 +321,7 @@ func TestFuzzProcessVoluntaryExits_10000(t *testing.T) {
 		fuzzer.Fuzz(e)
 		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
 		require.NoError(t, err)
-		r, err := ProcessVoluntaryExits(ctx, s, []*ethpb.SignedVoluntaryExit{e}, v.MaxExitEpochAndChurn(s))
+		r, _, err := ProcessVoluntaryExits(ctx, s, []*ethpb.SignedVoluntaryExit{e}, v.ExitInformation(s))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and exit: %v", r, err, state, e)
 		}
@@ -337,7 +337,7 @@ func TestFuzzProcessVoluntaryExitsNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(e)
 		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
 		require.NoError(t, err)
-		r, err := ProcessVoluntaryExits(context.Background(), s, []*ethpb.SignedVoluntaryExit{e}, v.MaxExitEpochAndChurn(s))
+		r, _, err := ProcessVoluntaryExits(context.Background(), s, []*ethpb.SignedVoluntaryExit{e}, v.ExitInformation(s))
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, e)
 		}
