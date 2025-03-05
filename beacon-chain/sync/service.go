@@ -168,6 +168,7 @@ type Service struct {
 	newBlobVerifier                  verification.NewBlobVerifier
 	availableBlocker                 coverage.AvailableBlocker
 	ctxMap                           ContextByteVersions
+	slasherEnabled                   bool
 }
 
 // NewService initializes new regular sync service.
