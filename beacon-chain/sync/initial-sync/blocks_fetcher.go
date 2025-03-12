@@ -910,7 +910,7 @@ func (f *blocksFetcher) fetchBwbSliceFromPeers(
 	}
 
 	// Select the peers that will be requested.
-	dataColumnsToFetchByPeer, err := selectPeersToFetchDataColumnsFrom(bwbSlice.dataColumns, dataColumnsByAdmissiblePeer)
+	dataColumnsToFetchByPeer, err := prysmsync.SelectPeersToFetchDataColumnsFrom(bwbSlice.dataColumns, dataColumnsByAdmissiblePeer)
 	if err != nil {
 		// This should never happen.
 		return errors.Wrap(err, "select peers to fetch data columns from")
@@ -1117,11 +1117,18 @@ func (f *blocksFetcher) waitForPeersForDataColumns(
 		return result
 	}
 
-	// Get the peers that are admissible for the data columns.
-	dataColumnsByAdmissiblePeer, admissiblePeersByDataColumn, descriptions, err := f.admissiblePeersForCustodyGroup(peers, lastSlot, neededDataColumns, blockCount)
+	// Filter for peers with head epoch greater than or equal to our target epoch for ByRange requests.
+	rangeReqPeers, descriptions, err := f.filterPeersByTargetSlotAndBandwidth(peers, lastSlot, blockCount)
 	if err != nil {
 		return nil, errors.Wrap(err, "peers with slot and data columns")
 	}
+
+	// Get the peers that are admissible for the data columns.
+	dataColumnsByAdmissiblePeer, admissiblePeersByDataColumn, moreDescriptions, err := prysmsync.AdmissiblePeersForDataColumns(rangeReqPeers, neededDataColumns, f.p2p)
+	if err != nil {
+		return nil, errors.Wrap(err, "peers with slot and data columns")
+	}
+	descriptions = append(descriptions, moreDescriptions...)
 
 	dataColumnsWithoutPeers := computeDataColumnsWithoutPeers(neededDataColumns, admissiblePeersByDataColumn)
 
@@ -1171,10 +1178,18 @@ func (f *blocksFetcher) waitForPeersForDataColumns(
 
 		time.Sleep(delay)
 
-		dataColumnsByAdmissiblePeer, admissiblePeersByDataColumn, descriptions, err = f.admissiblePeersForCustodyGroup(peers, lastSlot, neededDataColumns, blockCount)
+		// Filter for peers with head epoch greater than or equal to our target epoch for ByRange requests.
+		rangeReqPeers, descriptions, err = f.filterPeersByTargetSlotAndBandwidth(peers, lastSlot, blockCount)
 		if err != nil {
 			return nil, errors.Wrap(err, "peers with slot and data columns")
 		}
+
+		// Get the peers that are admissible for the data columns.
+		dataColumnsByAdmissiblePeer, admissiblePeersByDataColumn, moreDescriptions, err = prysmsync.AdmissiblePeersForDataColumns(rangeReqPeers, neededDataColumns, f.p2p)
+		if err != nil {
+			return nil, errors.Wrap(err, "peers with slot and data columns")
+		}
+		descriptions = append(descriptions, moreDescriptions...)
 
 		dataColumnsWithoutPeers = computeDataColumnsWithoutPeers(neededDataColumns, admissiblePeersByDataColumn)
 	}

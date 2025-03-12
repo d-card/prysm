@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/runtime/logging"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 )
@@ -78,19 +77,26 @@ func (s *Service) sendBeaconBlocksRequest(
 		peerDASIsActive := coreTime.PeerDASIsActive(blockSlot)
 
 		if peerDASIsActive {
-			// For the block, check if we store all the data columns we should custody,
-			// and build the corresponding data column sidecar requests if needed.
-			requests, err := s.buildRequestsForMissingDataColumns(blkRoot, blk)
+			// For the block, check if we store all the data columns we should custody.
+			missingColumns, err := FindMissingDataColumns(
+				blkRoot,
+				blk,
+				s.cfg.p2p.NodeID(),
+				s.cfg.custodyInfo.CustodyGroupSamplingSize(peerdas.Actual),
+				s.cfg.blobStorage,
+			)
 			if err != nil {
-				return errors.Wrap(err, "pending data column request for block")
+				return errors.Wrap(err, "find missing data columns")
 			}
 
 			// We already store all the data columns we should custody, nothing to request.
-			if len(requests) == 0 {
+			if len(missingColumns) == 0 {
 				continue
 			}
 
-			if err := s.requestAndSaveDataColumnSidecars(ctx, requests, id, blk); err != nil {
+			// Request and save the missing data column sidecars. This will issue multiple requests to
+			// different peers, not just the peer we happened to request the block from.
+			if err := s.requestAndSaveDataColumnSidecars(ctx, missingColumns, blk, blkRoot); err != nil {
 				return errors.Wrap(err, "send and save data column sidecars")
 			}
 
@@ -217,49 +223,27 @@ func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.Blo
 
 // requestAndSaveDataColumnSidecars sends a data column sidecars by root request
 // to a peer and saves the received sidecars.
+//
+// NOTE: During the initial sync, LazilyPersistentStoreColumn caches sidecars
+// and saves them to disk within IsDataAvailable. requestAndSaveDataColumnSidecars is called
+// when no caching is done in the pending blocks queue.
 func (s *Service) requestAndSaveDataColumnSidecars(
 	ctx context.Context,
-	request types.DataColumnSidecarsByRootReq,
-	peerID peer.ID,
+	dataColumns map[uint64]bool,
 	block interfaces.ReadOnlySignedBeaconBlock,
+	blkRoot [32]byte,
 ) error {
-	if len(request) == 0 {
+	if len(dataColumns) == 0 {
 		return nil
 	}
-
-	sidecars, err := SendDataColumnSidecarsByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, peerID, s.ctxMap, &request)
+	peers := s.getBestPeers()
+	sidecars, err := RequestDataColumnSidecarsByRoot(ctx, dataColumns, block, blkRoot, peers, s.cfg.clock, s.cfg.p2p, s.ctxMap, s.newColumnsVerifier)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "request data column sidecars")
 	}
 
-	roBlock, err := blocks.NewROBlock(block)
-	if err != nil {
-		return err
-	}
-
-	wrappedBlockDataColumns := make([]verify.WrappedBlockDataColumn, 0, len(sidecars))
-	for _, sidecar := range sidecars {
-		wrappedBlockDataColumn := verify.WrappedBlockDataColumn{
-			ROBlock:      roBlock.Block(),
-			RODataColumn: sidecar,
-		}
-
-		wrappedBlockDataColumns = append(wrappedBlockDataColumns, wrappedBlockDataColumn)
-	}
-
-	if err := verify.DataColumnsAlignWithBlock(wrappedBlockDataColumns, s.newColumnsVerifier); err != nil {
-		return errors.Wrap(err, "data columns align with block")
-	}
-
-	for _, sidecar := range sidecars {
-		log.WithFields(logging.DataColumnFields(sidecar)).Debug("Received data column sidecar RPC")
-	}
-
-	for i := range sidecars {
-		verfiedCol := blocks.NewVerifiedRODataColumn(sidecars[i])
-		if err := s.cfg.blobStorage.SaveDataColumn(verfiedCol); err != nil {
-			return err
-		}
+	if err := SaveDataColumns(sidecars, s.cfg.blobStorage); err != nil {
+		return errors.Wrap(err, "save data column")
 	}
 
 	return nil
@@ -277,66 +261,6 @@ func (s *Service) pendingBlobsRequestForBlock(root [32]byte, b interfaces.ReadOn
 		return nil, nil
 	}
 	return s.constructPendingBlobsRequest(root, len(cc))
-}
-
-// buildRequestsForMissingDataColumns looks at the data columns we should sample from and have via custody sampling
-// and that we don't actually store for a given block, and construct the corresponding data column sidecars by root requests.
-func (s *Service) buildRequestsForMissingDataColumns(root [32]byte, block interfaces.ReadOnlySignedBeaconBlock) (types.DataColumnSidecarsByRootReq, error) {
-	// Blocks before Fulu have no data columns.
-	if block.Version() < version.Fulu {
-		return nil, nil
-	}
-
-	// Get the blob commitments from the block.
-	commitments, err := block.Block().Body().BlobKzgCommitments()
-	if err != nil {
-		return nil, errors.Wrap(err, "blob KZG commitments")
-	}
-
-	// Nothing to build if there are no commitments.
-	if len(commitments) == 0 {
-		return nil, nil
-	}
-
-	// Retrieve the columns we store for the root.
-	numberOfColumns := params.BeaconConfig().NumberOfColumns
-	summary := s.cfg.blobStorage.Summary(root)
-
-	storedColumns := make(map[uint64]bool, numberOfColumns)
-	for i := range numberOfColumns {
-		if summary.HasDataColumnIndex(i) {
-			storedColumns[i] = true
-		}
-	}
-
-	// Get our node ID.
-	nodeID := s.cfg.p2p.NodeID()
-
-	// Retrieve the number of groups we should sample from.
-	samplingGroupSize := s.cfg.custodyInfo.CustodyGroupSamplingSize(peerdas.Actual)
-
-	// Retrieve the peer info.
-	peerInfo, _, err := peerdas.Info(nodeID, samplingGroupSize)
-	if err != nil {
-		return nil, errors.Wrap(err, "peer info")
-	}
-
-	samplingColumns := peerInfo.CustodyColumns
-	samplingColumnCount := len(samplingColumns)
-
-	// Build the request for the columns we should sample from and we don't actually store.
-	req := make(types.DataColumnSidecarsByRootReq, 0, samplingColumnCount)
-	for column := range samplingColumns {
-		isColumnStored := storedColumns[column]
-		if !isColumnStored {
-			req = append(req, &eth.DataColumnIdentifier{
-				BlockRoot:   root[:],
-				ColumnIndex: column,
-			})
-		}
-	}
-
-	return req, nil
 }
 
 // constructPendingBlobsRequest creates a request for BlobSidecars by root, considering blobs already in DB.
