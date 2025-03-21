@@ -192,7 +192,6 @@ func (v *validator) Init(ctx context.Context) error {
 		break
 	}
 
-	// should there be a check if it's too later into current slot?
 	if err := v.UpdateDuties(ctx, currentSlot); err != nil {
 		handleAssignmentError(err, currentSlot)
 	}
