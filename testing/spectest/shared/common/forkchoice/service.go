@@ -52,15 +52,15 @@ func startChainService(t testing.TB,
 	require.NoError(t, db.SaveState(ctx, st, r))
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
+	fc := doublylinkedtree.New()
 	attPool, err := attestations.NewService(ctx, &attestations.Config{
-		Pool: attestations.NewPool(),
+		Pool: attestations.NewPool(fc),
 	})
 	require.NoError(t, err)
 
 	depositCache, err := depositsnapshot.New()
 	require.NoError(t, err)
 
-	fc := doublylinkedtree.New()
 	sg := stategen.New(db, fc)
 	opts := append([]blockchain.Option{},
 		blockchain.WithExecutionEngineCaller(engineMock),
@@ -70,7 +70,7 @@ func startChainService(t testing.TB,
 		blockchain.WithForkChoiceStore(fc),
 		blockchain.WithStateGen(sg),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
-		blockchain.WithAttestationPool(attestations.NewPool()),
+		blockchain.WithAttestationPool(attestations.NewPool(fc)),
 		blockchain.WithDepositCache(depositCache),
 		blockchain.WithTrackedValidatorsCache(cache.NewTrackedValidatorsCache()),
 		blockchain.WithPayloadIDCache(cache.NewPayloadIDCache()),

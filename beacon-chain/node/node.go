@@ -137,6 +137,8 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	registry := runtime.NewServiceRegistry()
 	ctx := cliCtx.Context
 
+	fc := doublylinkedtree.New()
+
 	beacon := &BeaconNode{
 		cliCtx:                  cliCtx,
 		ctx:                     ctx,
@@ -147,7 +149,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		blockFeed:               new(event.Feed),
 		opFeed:                  new(event.Feed),
 		attestationCache:        cache.NewAttestationCache(),
-		attestationPool:         attestations.NewPool(),
+		attestationPool:         attestations.NewPool(fc),
 		exitPool:                voluntaryexits.NewPool(),
 		slashingsPool:           slashings.NewPool(),
 		syncCommitteePool:       synccommittee.NewPool(),
@@ -170,7 +172,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 
 	synchronizer := startup.NewClockSynchronizer()
 	beacon.clockWaiter = synchronizer
-	beacon.forkChoicer = doublylinkedtree.New()
+	beacon.forkChoicer = fc
 
 	depositAddress, err := execution.DepositContractAddress()
 	if err != nil {

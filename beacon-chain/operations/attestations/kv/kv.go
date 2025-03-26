@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/patrickmn/go-cache"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/attmap"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -18,19 +19,23 @@ import (
 // These caches are KV store for various attestations
 // such are unaggregated, aggregated or attestations within a block.
 type AttCaches struct {
-	aggregatedAttLock  sync.RWMutex
-	aggregatedAtt      map[attestation.Id][]ethpb.Att
-	unAggregateAttLock sync.RWMutex
-	unAggregatedAtt    map[attestation.Id]ethpb.Att
-	forkchoiceAtt      *attmap.Attestations
-	blockAttLock       sync.RWMutex
-	blockAtt           map[attestation.Id][]ethpb.Att
-	seenAtt            *cache.Cache
+	aggregatedAttLock   sync.RWMutex
+	aggregatedAtt       map[attestation.Id][]ethpb.Att
+	unAggregateAttLock  sync.RWMutex
+	unAggregatedAtt     map[attestation.Id]ethpb.Att
+	forkchoiceAtt       *attmap.Attestations
+	blockAttLock        sync.RWMutex
+	blockAtt            map[attestation.Id][]ethpb.Att
+	seenAtt             *cache.Cache
+	fc                  forkchoice.ForkChoicer
+	fcDumpLimit         uint64
+	bitlistErrCountLock sync.RWMutex
+	bitlistErrCount     map[attestation.Id]uint64
 }
 
 // NewAttCaches initializes a new attestation pool consists of multiple KV store in cache for
 // various kind of attestations.
-func NewAttCaches() *AttCaches {
+func NewAttCaches(fc forkchoice.ForkChoicer) *AttCaches {
 	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	c := cache.New(2*secsInEpoch*time.Second, 2*secsInEpoch*time.Second)
 	pool := &AttCaches{
@@ -39,6 +44,9 @@ func NewAttCaches() *AttCaches {
 		forkchoiceAtt:   attmap.New(),
 		blockAtt:        make(map[attestation.Id][]ethpb.Att),
 		seenAtt:         c,
+		fc:              fc,
+		fcDumpLimit:     100,
+		bitlistErrCount: make(map[attestation.Id]uint64),
 	}
 
 	return pool

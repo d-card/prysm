@@ -17,6 +17,7 @@ go_library(
     ],
     deps = [
         "//beacon-chain/cache:go_default_library",
+        "//beacon-chain/forkchoice:go_default_library",
         "//beacon-chain/operations/attestations/kv:go_default_library",
         "//cache/lru:go_default_library",
         "//config/features:go_default_library",
