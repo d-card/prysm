@@ -68,7 +68,7 @@ var (
 var backOffPeriod = 10 * time.Second
 
 type validator struct {
-	duties                             *ethpb.DutiesResponse
+	duties                             *ethpb.ValidatorDutiesContainer
 	ticker                             slots.Ticker
 	genesisTime                        uint64
 	highestValidSlot                   primitives.Slot
@@ -681,14 +681,14 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 
 // subscribeToSubnets iterates through each validator duty, signs each slot, and asks beacon node
 // to eagerly subscribe to subnets so that the aggregator has attestations to aggregate.
-func (v *validator) subscribeToSubnets(ctx context.Context, duties *ethpb.DutiesResponse) error {
+func (v *validator) subscribeToSubnets(ctx context.Context, duties *ethpb.ValidatorDutiesContainer) error {
 	ctx, span := trace.StartSpan(ctx, "validator.subscribeToSubnets")
 	defer span.End()
 
 	subscribeSlots := make([]primitives.Slot, 0, len(duties.CurrentEpochDuties)+len(duties.NextEpochDuties))
 	subscribeCommitteeIndices := make([]primitives.CommitteeIndex, 0, len(duties.CurrentEpochDuties)+len(duties.NextEpochDuties))
 	subscribeIsAggregator := make([]bool, 0, len(duties.CurrentEpochDuties)+len(duties.NextEpochDuties))
-	activeDuties := make([]*ethpb.DutiesResponse_Duty, 0, len(duties.CurrentEpochDuties)+len(duties.NextEpochDuties))
+	activeDuties := make([]*ethpb.ValidatorDuty, 0, len(duties.CurrentEpochDuties)+len(duties.NextEpochDuties))
 	alreadySubscribed := make(map[[64]byte]bool)
 
 	if v.distributed {
@@ -710,7 +710,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, duties *ethpb.Duties
 				continue
 			}
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, pk, validatorIndex)
+			aggregator, err := v.isAggregator(ctx, duty.CommitteeLength, attesterSlot, pk, validatorIndex)
 			if err != nil {
 				return errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
@@ -736,7 +736,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, duties *ethpb.Duties
 				continue
 			}
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey), validatorIndex)
+			aggregator, err := v.isAggregator(ctx, duty.CommitteeLength, attesterSlot, bytesutil.ToBytes48(duty.PublicKey), validatorIndex)
 			if err != nil {
 				return errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
@@ -799,7 +799,7 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 		if duty.AttesterSlot == slot {
 			roles = append(roles, iface.RoleAttester)
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey), duty.ValidatorIndex)
+			aggregator, err := v.isAggregator(ctx, duty.CommitteeLength, slot, bytesutil.ToBytes48(duty.PublicKey), duty.ValidatorIndex)
 			if err != nil {
 				aggregator = false
 				log.WithError(err).Errorf("Could not check if validator %#x is an aggregator", bytesutil.Trunc(duty.PublicKey))
@@ -878,7 +878,7 @@ func (v *validator) Keymanager() (keymanager.IKeymanager, error) {
 // it uses a modulo calculated by validator count in committee and samples randomness around it.
 func (v *validator) isAggregator(
 	ctx context.Context,
-	committeeIndex []primitives.ValidatorIndex,
+	committeeLength uint64,
 	slot primitives.Slot,
 	pubKey [fieldparams.BLSPubkeyLength]byte,
 	validatorIndex primitives.ValidatorIndex,
@@ -887,8 +887,8 @@ func (v *validator) isAggregator(
 	defer span.End()
 
 	modulo := uint64(1)
-	if len(committeeIndex)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
-		modulo = uint64(len(committeeIndex)) / params.BeaconConfig().TargetAggregatorsPerCommittee
+	if committeeLength/params.BeaconConfig().TargetAggregatorsPerCommittee > 1 {
+		modulo = committeeLength / params.BeaconConfig().TargetAggregatorsPerCommittee
 	}
 
 	var (
@@ -1041,7 +1041,7 @@ func (v *validator) domainData(ctx context.Context, epoch primitives.Epoch, doma
 	return res, nil
 }
 
-func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.DutiesResponse_Duty, nextEpochDuties []*ethpb.DutiesResponse_Duty) {
+func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.ValidatorDuty, nextEpochDuties []*ethpb.ValidatorDuty) {
 	attesterKeys := make([][]string, params.BeaconConfig().SlotsPerEpoch)
 	for i := range attesterKeys {
 		attesterKeys[i] = make([]string, 0)
@@ -1477,7 +1477,7 @@ func (v *validator) buildSignedRegReqs(
 	return signedValRegRequests
 }
 
-func (v *validator) aggregatedSelectionProofs(ctx context.Context, duties *ethpb.DutiesResponse) error {
+func (v *validator) aggregatedSelectionProofs(ctx context.Context, duties *ethpb.ValidatorDutiesContainer) error {
 	ctx, span := trace.StartSpan(ctx, "validator.aggregatedSelectionProofs")
 	defer span.End()
 
