@@ -38,6 +38,20 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 
 // rpcHandlerByTopicFromFork returns the RPC handlers for a given fork index.
 func (s *Service) rpcHandlerByTopicFromFork(forkIndex int) (map[string]rpcHandler, error) {
+	if forkIndex >= version.EPBS {
+		return map[string]rpcHandler{
+			p2p.RPCStatusTopicV1:                  s.statusRPCHandler,
+			p2p.RPCGoodByeTopicV1:                 s.goodbyeRPCHandler,
+			p2p.RPCBlocksByRangeTopicV2:           s.beaconBlocksByRangeRPCHandler,
+			p2p.RPCBlocksByRootTopicV2:            s.beaconBlocksRootRPCHandler,
+			p2p.RPCPingTopicV1:                    s.pingHandler,
+			p2p.RPCMetaDataTopicV2:                s.metaDataHandler,
+			p2p.RPCBlobSidecarsByRootTopicV1:      s.blobSidecarByRootRPCHandler,
+			p2p.RPCBlobSidecarsByRangeTopicV1:     s.blobSidecarsByRangeRPCHandler,
+			p2p.RPCExecutionPayloadsByRootTopicV1: s.executionPayloadByRootRPCHandler,
+		}, nil
+	}
+
 	// Electra: https://github.com/ethereum/consensus-specs/blob/dev/specs/electra/p2p-interface.md#messages
 	if forkIndex >= version.Electra {
 		return map[string]rpcHandler{
@@ -100,6 +114,9 @@ func (s *Service) rpcHandlerByTopicFromEpoch(epoch primitives.Epoch) (map[string
 	// Get the beacon config.
 	beaconConfig := params.BeaconConfig()
 
+	if epoch >= beaconConfig.EPBSForkEpoch {
+		return s.rpcHandlerByTopicFromFork(version.EPBS)
+	}
 	if epoch >= beaconConfig.FuluForkEpoch {
 		return s.rpcHandlerByTopicFromFork(version.Fulu)
 	}

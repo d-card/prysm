@@ -108,6 +108,8 @@ type Reconstructor interface {
 		ctx context.Context, blindedBlocks []interfaces.ReadOnlySignedBeaconBlock,
 	) ([]interfaces.SignedBeaconBlock, error)
 	ReconstructBlobSidecars(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, hi func(uint64) bool) ([]blocks.VerifiedROBlob, error)
+	Client() RPCClient
+	ReconstructPayloadEnvelope(ctx context.Context, e *pb.SignedBlindPayloadEnvelope) (*pb.SignedExecutionPayloadEnvelope, error)
 }
 
 // EngineCaller defines a client that can interact with an Ethereum
@@ -223,7 +225,7 @@ func (s *Service) ForkchoiceUpdated(
 		if err != nil {
 			return nil, nil, handleRPCError(err)
 		}
-	case version.Deneb, version.Electra, version.Fulu:
+	case version.Deneb, version.Electra, version.Fulu, version.EPBS:
 		a, err := attrs.PbV3()
 		if err != nil {
 			return nil, nil, err

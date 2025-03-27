@@ -3,6 +3,7 @@ package helpers_test
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -729,17 +730,26 @@ func TestCommitteeIndices(t *testing.T) {
 	assert.DeepEqual(t, []primitives.CommitteeIndex{0, 1, 3}, indices)
 }
 
-func TestAttestationCommitteesFromState(t *testing.T) {
-	ctx := context.Background()
+func TestCommitteeAssignments_PTC(t *testing.T) {
+	helpers.ClearCache()
+	// Create 10 committees. Total 40960 validators.
+	committeeCount := uint64(10)
+	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize * uint64(params.BeaconConfig().SlotsPerEpoch)
+	validators := make([]*ethpb.Validator, validatorCount)
+	validatorIndices := make([]primitives.ValidatorIndex, validatorCount)
 
-	validators := make([]*ethpb.Validator, params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().TargetCommitteeSize))
 	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
 		validators[i] = &ethpb.Validator{
-			ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			PublicKey:             k,
+			WithdrawalCredentials: make([]byte, 32),
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 		}
+		validatorIndices[i] = primitives.ValidatorIndex(i)
 	}
 
-	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+	state, err := state_native.InitializeFromProtoEpbs(&ethpb.BeaconStateEPBS{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
@@ -763,6 +773,31 @@ func TestAttestationCommitteesFromState(t *testing.T) {
 		assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(committees[0])))
 		assert.Equal(t, params.BeaconConfig().TargetCommitteeSize, uint64(len(committees[1])))
 	})
+	as, err := helpers.CommitteeAssignments(context.Background(), state, 1, validatorIndices)
+	require.NoError(t, err)
+
+	// Capture all the slots and all the validator index that belonged in a PTC using a map for verification later.
+	slotValidatorMap := make(map[primitives.Slot][]primitives.ValidatorIndex)
+	for i, a := range as {
+		slotValidatorMap[a.PtcSlot] = append(slotValidatorMap[a.PtcSlot], i)
+	}
+
+	// Verify that all the slots have the correct number of PTC.
+	for s, v := range slotValidatorMap {
+		if s == 0 {
+			continue
+		}
+		// Make sure all the PTC are the correct size from the map.
+		require.Equal(t, len(v), field_params.PTCSize)
+
+		// Get the actual PTC from the beacon state using the helper function
+		ptc, err := helpers.GetPayloadTimelinessCommittee(context.Background(), state, s)
+		require.NoError(t, err)
+		for _, index := range ptc {
+			i := slices.Index(v, index)
+			require.NotEqual(t, -1, i) // PTC not found from the assignment map
+		}
+	}
 }
 
 func TestAttestationCommitteesFromCache(t *testing.T) {

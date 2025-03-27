@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/OffchainLabs/prysm/v6/beacon-chain/execution"
 	"github.com/OffchainLabs/prysm/v6/config/params"
 	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
@@ -40,6 +41,10 @@ type EngineClient struct {
 	ErrorBlobSidecars           error
 }
 
+func (e *EngineClient) Client() execution.RPCClient {
+	return nil
+}
+
 // NewPayload --
 func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData, _ []common.Hash, _ *common.Hash, _ *pb.ExecutionRequests) ([]byte, error) {
 	return e.NewPayloadResp, e.ErrNewPayload
@@ -72,6 +77,10 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ 
 		return nil, errors.New("block not found")
 	}
 	return b, e.ErrExecBlockByHash
+}
+
+func (e *EngineClient) ReconstructPayloadEnvelope(_ context.Context, _ *pb.SignedBlindPayloadEnvelope) (*pb.SignedExecutionPayloadEnvelope, error) {
+	panic("implement me")
 }
 
 // ReconstructFullBlock --

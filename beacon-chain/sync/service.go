@@ -9,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
+	"github.com/OffchainLabs/prysm/v6/beacon-chain/sync/epbs"
+	payloadattestation "github.com/OffchainLabs/prysm/v6/consensus-types/epbs/payload-attestation"
 	lru "github.com/hashicorp/golang-lru"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
@@ -107,6 +110,7 @@ type config struct {
 // This defines the interface for interacting with block chain service
 type blockchainService interface {
 	blockchain.BlockReceiver
+	blockchain.PayloadAttestationReceiver
 	blockchain.BlobReceiver
 	blockchain.HeadFetcher
 	blockchain.FinalizationFetcher
@@ -118,53 +122,61 @@ type blockchainService interface {
 	blockchain.OptimisticModeFetcher
 	blockchain.SlashingReceiver
 	blockchain.ForkchoiceFetcher
+	blockchain.ExecutionPayloadFetcher
 }
 
 // Service is responsible for handling all run time p2p related operations as the
 // main entry point for network messages.
 type Service struct {
-	cfg                              *config
-	ctx                              context.Context
-	cancel                           context.CancelFunc
-	slotToPendingBlocks              *gcache.Cache
-	seenPendingBlocks                map[[32]byte]bool
-	blkRootToPendingAtts             map[[32]byte][]ethpb.SignedAggregateAttAndProof
-	subHandler                       *subTopicHandler
-	pendingAttsLock                  sync.RWMutex
-	pendingQueueLock                 sync.RWMutex
-	chainStarted                     *abool.AtomicBool
-	validateBlockLock                sync.RWMutex
-	rateLimiter                      *limiter
-	seenBlockLock                    sync.RWMutex
-	seenBlockCache                   *lru.Cache
-	seenBlobLock                     sync.RWMutex
-	seenBlobCache                    *lru.Cache
-	seenAggregatedAttestationLock    sync.RWMutex
-	seenAggregatedAttestationCache   *lru.Cache
-	seenUnAggregatedAttestationLock  sync.RWMutex
-	seenUnAggregatedAttestationCache *lru.Cache
-	seenExitLock                     sync.RWMutex
-	seenExitCache                    *lru.Cache
-	seenProposerSlashingLock         sync.RWMutex
-	seenProposerSlashingCache        *lru.Cache
-	seenAttesterSlashingLock         sync.RWMutex
-	seenAttesterSlashingCache        map[uint64]bool
-	seenSyncMessageLock              sync.RWMutex
-	seenSyncMessageCache             *lru.Cache
-	seenSyncContributionLock         sync.RWMutex
-	seenSyncContributionCache        *lru.Cache
-	badBlockCache                    *lru.Cache
-	badBlockLock                     sync.RWMutex
-	syncContributionBitsOverlapLock  sync.RWMutex
-	syncContributionBitsOverlapCache *lru.Cache
-	signatureChan                    chan *signatureVerifier
-	clockWaiter                      startup.ClockWaiter
-	initialSyncComplete              chan struct{}
-	verifierWaiter                   *verification.InitializerWaiter
-	newBlobVerifier                  verification.NewBlobVerifier
-	availableBlocker                 coverage.AvailableBlocker
-	ctxMap                           ContextByteVersions
-	slasherEnabled                   bool
+	cfg                                 *config
+	ctx                                 context.Context
+	cancel                              context.CancelFunc
+	slotToPendingBlocks                 *gcache.Cache
+	seenPendingBlocks                   map[[32]byte]bool
+	blkRootToPendingAtts                map[[32]byte][]ethpb.SignedAggregateAttAndProof
+	subHandler                          *subTopicHandler
+	payloadAttestationCache             *cache.PayloadAttestationCache
+	executionPayloadHeaderCache         *cache.ExecutionPayloadHeaders
+	payloadEnvelopeCache                *sync.Map
+	pendingAttsLock                     sync.RWMutex
+	pendingQueueLock                    sync.RWMutex
+	chainStarted                        *abool.AtomicBool
+	validateBlockLock                   sync.RWMutex
+	rateLimiter                         *limiter
+	seenBlockLock                       sync.RWMutex
+	seenBlockCache                      *lru.Cache
+	seenBlobLock                        sync.RWMutex
+	seenBlobCache                       *lru.Cache
+	seenAggregatedAttestationLock       sync.RWMutex
+	seenAggregatedAttestationCache      *lru.Cache
+	seenUnAggregatedAttestationLock     sync.RWMutex
+	seenUnAggregatedAttestationCache    *lru.Cache
+	seenExitLock                        sync.RWMutex
+	seenExitCache                       *lru.Cache
+	seenProposerSlashingLock            sync.RWMutex
+	seenProposerSlashingCache           *lru.Cache
+	seenAttesterSlashingLock            sync.RWMutex
+	seenAttesterSlashingCache           map[uint64]bool
+	seenSyncMessageLock                 sync.RWMutex
+	seenSyncMessageCache                *lru.Cache
+	seenSyncContributionLock            sync.RWMutex
+	seenSyncContributionCache           *lru.Cache
+	badBlockCache                       *lru.Cache
+	badBlockLock                        sync.RWMutex
+	syncContributionBitsOverlapLock     sync.RWMutex
+	syncContributionBitsOverlapCache    *lru.Cache
+	signatureChan                       chan *signatureVerifier
+	clockWaiter                         startup.ClockWaiter
+	initialSyncComplete                 chan struct{}
+	verifierWaiter                      *verification.InitializerWaiter
+	newBlobVerifier                     verification.NewBlobVerifier
+	newPayloadAttestationVerifier       verification.NewPayloadAttestationMsgVerifier
+	newExecutionPayloadEnvelopeVerifier verification.NewExecutionPayloadEnvelopeVerifier
+	newExecutionPayloadHeaderVerifier   verification.NewExecutionPayloadHeaderVerifier
+	pendingExecutionPayloads            *epbs.PayloadPendingQueue
+	availableBlocker                    coverage.AvailableBlocker
+	ctxMap                              ContextByteVersions
+	slasherEnabled                      bool
 }
 
 // NewService initializes new regular sync service.
@@ -221,6 +233,24 @@ func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.
 	}
 }
 
+func newPayloadAttestationMessageFromInitializer(ini *verification.Initializer) verification.NewPayloadAttestationMsgVerifier {
+	return func(pa payloadattestation.ROMessage, reqs []verification.Requirement) verification.PayloadAttestationMsgVerifier {
+		return ini.NewPayloadAttestationMsgVerifier(pa, reqs)
+	}
+}
+
+func newPayloadVerifierFromInitializer(ini *verification.Initializer) verification.NewExecutionPayloadEnvelopeVerifier {
+	return func(e interfaces.ROSignedExecutionPayloadEnvelope, reqs []verification.Requirement) verification.ExecutionPayloadEnvelopeVerifier {
+		return ini.NewPayloadEnvelopeVerifier(e, reqs)
+	}
+}
+
+func newExecutionPayloadHeaderVerifierFromInitializer(ini *verification.Initializer) verification.NewExecutionPayloadHeaderVerifier {
+	return func(e interfaces.ROSignedExecutionPayloadHeader, st state.ReadOnlyBeaconState, reqs []verification.Requirement) verification.ExecutionPayloadHeaderVerifier {
+		return ini.NewHeaderVerifier(e, st, reqs)
+	}
+}
+
 // Start the regular sync service.
 func (s *Service) Start() {
 	v, err := s.verifierWaiter.WaitForInitializer(s.ctx)
@@ -229,6 +259,10 @@ func (s *Service) Start() {
 		return
 	}
 	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
+	s.newPayloadAttestationVerifier = newPayloadAttestationMessageFromInitializer(v)
+	s.newExecutionPayloadEnvelopeVerifier = newPayloadVerifierFromInitializer(v)
+	s.newExecutionPayloadHeaderVerifier = newExecutionPayloadHeaderVerifierFromInitializer(v)
+	s.pendingExecutionPayloads = epbs.NewPayloadPendingQueue()
 
 	go s.verifierRoutine()
 	go s.startTasksPostInitialSync()
@@ -349,6 +383,9 @@ func (s *Service) startTasksPostInitialSync() {
 		// Register respective pubsub handlers at state synced event.
 		s.registerSubscribers(currentEpoch, forkDigest)
 
+		// Start the late payload tasks.
+		go s.runLatePayloadTasks()
+
 		// Start the fork watcher.
 		go s.forkWatcher()
 
@@ -382,4 +419,22 @@ type Checker interface {
 	Synced() bool
 	Status() error
 	Resync() error
+}
+
+func (s *Service) runLatePayloadTasks() {
+	ptcThreshold := params.BeaconConfig().SecondsPerSlot * 3 / 4
+	ticker := slots.NewSlotTickerWithOffset(s.cfg.clock.GenesisTime(), time.Duration(ptcThreshold)*time.Second, params.BeaconConfig().SecondsPerSlot)
+	epbs := params.BeaconConfig().EPBSForkEpoch
+	for {
+		select {
+		case slot := <-ticker.C():
+			if slots.ToEpoch(slot) >= epbs {
+				s.latePayloadTasks(s.ctx)
+			}
+		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting routine")
+			return
+		}
+	}
+
 }

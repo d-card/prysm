@@ -61,6 +61,7 @@ type ReadOnlyBeaconState interface {
 	ReadOnlySyncCommittee
 	ReadOnlyDeposits
 	ReadOnlyConsolidations
+	ReadOnlyEpbsFields
 	ToProtoUnsafe() interface{}
 	ToProto() interface{}
 	GenesisTime() uint64
@@ -95,6 +96,7 @@ type WriteOnlyBeaconState interface {
 	WriteOnlyConsolidations
 	WriteOnlyWithdrawals
 	WriteOnlyDeposits
+	WriteOnlyEpbsFields
 	SetGenesisTime(val uint64) error
 	SetGenesisValidatorsRoot(val []byte) error
 	SetSlot(val primitives.Slot) error

@@ -1170,6 +1170,11 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.ReadOnlySignedBea
 		if err := rawBlock.UnmarshalSSZ(enc[len(fuluBlindKey):]); err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal blinded Fulu block")
 		}
+	case hasEpbsKey(enc):
+		rawBlock = &ethpb.SignedBeaconBlockEpbs{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(epbsKey):]); err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal EPBS block")
+		}
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock = &ethpb.SignedBeaconBlock{}
@@ -1199,6 +1204,10 @@ func encodeBlock(blk interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
 
 func keyForBlock(blk interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
 	v := blk.Version()
+
+	if v >= version.EPBS {
+		return epbsKey, nil
+	}
 
 	if v >= version.Fulu {
 		if blk.IsBlinded() {

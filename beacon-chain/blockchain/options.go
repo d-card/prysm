@@ -1,6 +1,8 @@
 package blockchain
 
 import (
+	"sync"
+
 	"github.com/OffchainLabs/prysm/v6/async/event"
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
 	statefeed "github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/state"
@@ -66,6 +68,22 @@ func WithExecutionEngineCaller(c execution.EngineCaller) Option {
 func WithDepositCache(c cache.DepositCache) Option {
 	return func(s *Service) error {
 		s.cfg.DepositCache = c
+		return nil
+	}
+}
+
+// WithPayloadAttestationCache for payload attestation cache.
+func WithPayloadAttestationCache(c *cache.PayloadAttestationCache) Option {
+	return func(s *Service) error {
+		s.cfg.PayloadAttestationCache = c
+		return nil
+	}
+}
+
+// WithPayloadEnvelopeCache for payload envelope cache.
+func WithPayloadEnvelopeCache(c *sync.Map) Option {
+	return func(s *Service) error {
+		s.cfg.PayloadEnvelopeCache = c
 		return nil
 	}
 }

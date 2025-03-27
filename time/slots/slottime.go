@@ -86,6 +86,8 @@ func ToEpoch(slot primitives.Slot) primitives.Epoch {
 func ToForkVersion(slot primitives.Slot) int {
 	epoch := ToEpoch(slot)
 	switch {
+	case epoch >= params.BeaconConfig().EPBSForkEpoch:
+		return version.EPBS
 	case epoch >= params.BeaconConfig().FuluForkEpoch:
 		return version.Fulu
 	case epoch >= params.BeaconConfig().ElectraForkEpoch:
@@ -302,7 +304,12 @@ func TimeIntoSlot(genesisTime uint64) time.Duration {
 // WithinVotingWindow returns whether the current time is within the voting window
 // (eg. 4 seconds on mainnet) of the current slot.
 func WithinVotingWindow(genesisTime uint64, slot primitives.Slot) bool {
-	votingWindow := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+	var votingWindow uint64
+	if ToEpoch(slot) >= params.BeaconConfig().EPBSForkEpoch {
+		votingWindow = params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlotEPBS
+	} else {
+		votingWindow = params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+	}
 	return time.Since(StartTime(genesisTime, slot)) < time.Duration(votingWindow)*time.Second
 }
 

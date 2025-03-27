@@ -59,6 +59,9 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 //
 //	return block.body.execution_payload != ExecutionPayload()
 func IsExecutionBlock(body interfaces.ReadOnlyBeaconBlockBody) (bool, error) {
+	if body.Version() >= version.Capella {
+		return true, nil
+	}
 	if body == nil {
 		return false, errors.New("nil block body")
 	}
@@ -93,6 +96,9 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.ReadOnlyBeaconBloc
 	}
 	if IsPreBellatrixVersion(st.Version()) {
 		return false, nil
+	}
+	if body.Version() >= version.Capella {
+		return true, nil
 	}
 	header, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
@@ -244,12 +250,47 @@ func verifyBlobCommitmentCount(slot primitives.Slot, body interfaces.ReadOnlyBea
 // GetBlockPayloadHash returns the hash of the execution payload of the block
 func GetBlockPayloadHash(blk interfaces.ReadOnlyBeaconBlock) ([32]byte, error) {
 	var payloadHash [32]byte
-	if IsPreBellatrixVersion(blk.Version()) {
-		return payloadHash, nil
+	if blk.Version() >= version.EPBS {
+		header, err := blk.Body().SignedExecutionPayloadHeader()
+		if err != nil {
+			return payloadHash, err
+		}
+		payload, err := header.Header()
+		if err != nil {
+			return payloadHash, err
+		}
+		return payload.BlockHash(), nil
 	}
-	payload, err := blk.Body().Execution()
-	if err != nil {
-		return payloadHash, err
+	if blk.Version() >= version.Bellatrix {
+		payload, err := blk.Body().Execution()
+		if err != nil {
+			return payloadHash, err
+		}
+		return bytesutil.ToBytes32(payload.BlockHash()), nil
 	}
-	return bytesutil.ToBytes32(payload.BlockHash()), nil
+	return payloadHash, nil
+}
+
+// GetBlockParentHash returns the hash of the parent execution payload
+func GetBlockParentHash(blk interfaces.ReadOnlyBeaconBlock) ([32]byte, error) {
+	var parentHash [32]byte
+	if blk.Version() >= version.EPBS {
+		header, err := blk.Body().SignedExecutionPayloadHeader()
+		if err != nil {
+			return parentHash, err
+		}
+		payload, err := header.Header()
+		if err != nil {
+			return parentHash, err
+		}
+		return payload.ParentBlockHash(), nil
+	}
+	if blk.Version() >= version.Bellatrix {
+		payload, err := blk.Body().Execution()
+		if err != nil {
+			return parentHash, err
+		}
+		return bytesutil.ToBytes32(payload.ParentHash()), nil
+	}
+	return parentHash, nil
 }

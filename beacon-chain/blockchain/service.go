@@ -66,6 +66,7 @@ type Service struct {
 	blobStorage          *filesystem.BlobStorage
 	slasherEnabled       bool
 	lcStore              *lightClient.Store
+	payloadBeingSynced   *currentlySyncingPayload
 }
 
 // config options for the service.
@@ -74,6 +75,8 @@ type config struct {
 	ChainStartFetcher       execution.ChainStartFetcher
 	BeaconDB                db.HeadAccessDatabase
 	DepositCache            cache.DepositCache
+	PayloadAttestationCache *cache.PayloadAttestationCache
+	PayloadEnvelopeCache    *sync.Map
 	PayloadIDCache          *cache.PayloadIDCache
 	TrackedValidatorsCache  *cache.TrackedValidatorsCache
 	AttestationCache        *cache.AttestationCache
@@ -184,6 +187,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		blobNotifiers:        bn,
 		cfg:                  &config{},
 		blockBeingSynced:     &currentlySyncingBlock{roots: make(map[[32]byte]struct{})},
+		payloadBeingSynced:   &currentlySyncingPayload{roots: make(map[[32]byte]primitives.PTCStatus)},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
@@ -498,7 +502,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 // 2.) Check DB.
 // Checking 1.) is ten times faster than checking 2.)
 // this function requires a lock in forkchoice
-func (s *Service) hasBlock(ctx context.Context, root [32]byte) bool {
+func (s *Service) chainHasBlock(ctx context.Context, root [32]byte) bool {
 	if s.cfg.ForkChoiceStore.HasNode(root) {
 		return true
 	}
