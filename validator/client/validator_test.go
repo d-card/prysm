@@ -166,25 +166,41 @@ func TestValidatorInit(t *testing.T) {
 		ctx := context.Background()
 		mockCLient := validatormock.NewMockValidatorClient(ctrl)
 
+		waitForChainStartCalled := 0
+		backOffPeriod = 20 * time.Millisecond
 		genesis := uint64(time.Unix(1, 0).Unix())
 		genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
-		mockCLient.EXPECT().WaitForChainStart(
-			gomock.Any(),
-			&emptypb.Empty{},
-		).Return(nil, client.ErrConnectionIssue).Times(1).Return(&ethpb.ChainStartResponse{
-			Started:               true,
-			GenesisTime:           genesis,
-			GenesisValidatorsRoot: genesisValidatorsRoot[:],
-		}, nil)
+		gomock.InOrder(
+			mockCLient.EXPECT().WaitForChainStart(
+				gomock.Any(),
+				&emptypb.Empty{},
+			).Do(func(arg0 interface{}, arg1 interface{}) { waitForChainStartCalled++ }).Return(nil, client.ErrConnectionIssue).Times(1),
+			mockCLient.EXPECT().WaitForChainStart(
+				gomock.Any(),
+				&emptypb.Empty{},
+			).Return(&ethpb.ChainStartResponse{
+				Started:               true,
+				GenesisTime:           genesis,
+				GenesisValidatorsRoot: genesisValidatorsRoot[:],
+			}, nil).AnyTimes(),
+		)
 
 		db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
 		require.NoError(t, db.SaveGenesisValidatorsRoot(context.Background(), genesisValidatorsRoot[:]))
 
+		waitForSyncCalled := 0
 		n := validatormock.NewMockNodeClient(ctrl)
-		n.EXPECT().SyncStatus(
-			gomock.Any(),
-			gomock.Any(),
-		).Return(&ethpb.SyncStatus{Syncing: false}, nil)
+		gomock.InOrder(
+			n.EXPECT().SyncStatus(
+				gomock.Any(),
+				gomock.Any(),
+			).Do(func(arg0 interface{}, arg1 interface{}) { waitForSyncCalled++ }).Return(nil, errors.New("my fake error")).Times(1),
+
+			n.EXPECT().SyncStatus(
+				gomock.Any(),
+				gomock.Any(),
+			).Return(&ethpb.SyncStatus{Syncing: false}, nil).AnyTimes(),
+		)
 		ick := &local.InteropKeymanagerConfig{
 			NumValidatorKeys: 2,
 			Offset:           1,
@@ -216,37 +232,10 @@ func TestValidatorInit(t *testing.T) {
 		}
 
 		require.NoError(t, v.Init(ctx))
+		require.Equal(t, 1, waitForChainStartCalled) // check for retry in loop
+		require.Equal(t, 1, waitForSyncCalled)
 	}
 
-}
-
-func TestValidatorInit_Retry_On_ConnectionError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockCLient := validatormock.NewMockValidatorClient(ctrl)
-	v := &validator{
-		validatorClient: mockCLient,
-	}
-	WaitForChainStartCalled := 0
-	times := 2
-
-	mockCLient.EXPECT().WaitForChainStart(
-		gomock.Any(),
-		&emptypb.Empty{},
-	).Do(func(arg0 interface{}, arg1 interface{}) { WaitForChainStartCalled++ }).Return(nil, client.ErrConnectionIssue).Times(times)
-
-	backOffPeriod = 1000 * time.Millisecond
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		err := v.Init(ctx)
-		require.NoError(t, err)
-	}()
-
-	time.Sleep(backOffPeriod + (backOffPeriod / 2)) // stop the sleep before the next backoff period
-	cancel()
-
-	assert.Equal(t, times, WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 }
 
 func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {

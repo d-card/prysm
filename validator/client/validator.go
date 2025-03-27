@@ -166,8 +166,6 @@ func (v *validator) Init(ctx context.Context) error {
 		}
 
 		if err := v.WaitForKeymanagerInitialization(ctx); err != nil {
-			// log.Fatal will prevent defer from being called
-			v.Done()
 			return errors.Wrap(err, "Wallet is not ready")
 		}
 
