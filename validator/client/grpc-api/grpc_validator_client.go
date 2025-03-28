@@ -266,7 +266,7 @@ func (c *grpcValidatorClient) streamReorg(ctx context.Context, eventsChannel cha
 			}
 			b, err := json.Marshal(structs.ChainReorgEvent{
 				Slot:  strconv.FormatUint(uint64(res.Slot), 10),
-				Depth: strconv.FormatUint(uint64(res.Depth), 10),
+				Depth: strconv.FormatUint(res.Depth, 10),
 			})
 			if err != nil {
 				eventsChannel <- &eventClient.Event{
