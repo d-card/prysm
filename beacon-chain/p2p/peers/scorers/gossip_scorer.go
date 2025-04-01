@@ -9,6 +9,14 @@ import (
 
 var _ Scorer = (*GossipScorer)(nil)
 
+var badPeerAgents = map[peer.ID]struct{}{
+	"LightHouse": {},
+	"Teku":       {}, // TODO: should we keep this? I kinda like these guys, they implemented ePBS
+	"Lodestar":   {},
+	"Caplin":     {},
+	"Nimbus":     {},
+}
+
 const (
 	// The boundary till which a peer's gossip score is acceptable.
 	gossipThreshold = -100.0
@@ -65,7 +73,13 @@ func (s *GossipScorer) isBadPeerNoLock(pid peer.ID) error {
 		return nil
 	}
 
-	if peerData.GossipScore < gossipThreshold {
+	_, ok = badPeerAgents[pid]
+	badPeerBoost := 0.0
+	if ok {
+		badPeerBoost = 100.0
+	}
+
+	if peerData.GossipScore < gossipThreshold+badPeerBoost {
 		return errors.Errorf("gossip score below threshold: got %f - threshold %f", peerData.GossipScore, gossipThreshold)
 	}
 
