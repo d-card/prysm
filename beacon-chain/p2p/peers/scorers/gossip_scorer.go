@@ -15,6 +15,7 @@ var badPeerAgents = map[peer.ID]struct{}{
 	"Lodestar":   {},
 	"Caplin":     {},
 	"Nimbus":     {},
+	"Grandinet":  {},
 }
 
 const (
