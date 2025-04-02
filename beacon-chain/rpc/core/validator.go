@@ -17,7 +17,6 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/validators"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/types"
 	beaconState "github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
@@ -490,7 +489,7 @@ func (s *Service) GetAttestationData(
 		committeeIndex = req.CommitteeIndex
 	}
 
-	s.AttestationCache.RLock()
+	/*s.AttestationCache.RLock()
 	res := s.AttestationCache.Get()
 	if res != nil && res.Slot == req.Slot {
 		s.AttestationCache.RUnlock()
@@ -531,7 +530,8 @@ func (s *Service) GetAttestationData(
 				Root:  res.Target.Root[:],
 			},
 		}, nil
-	}
+	}*/
+
 	// cache miss, we need to check for optimistic status before proceeding
 	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
@@ -540,6 +540,32 @@ func (s *Service) GetAttestationData(
 	if optimistic {
 		return nil, &RpcError{Reason: Unavailable, Err: errOptimisticMode}
 	}
+
+	/*var headRoot []byte
+	if req.CommitteeIndex%2 == 0 || req.Slot == 0 {
+		_, roots, err := s.BeaconDB.BlockRootsBySlot(ctx, req.Slot)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: err}
+		}
+		if len(roots) > 0 {
+			headRoot = roots[0][:]
+		}
+	} else {
+		_, roots, err := s.BeaconDB.BlockRootsBySlot(ctx, req.Slot-1)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: err}
+		}
+		if len(roots) > 0 {
+			headRoot = roots[0][:]
+		}
+	}
+	if headRoot == nil {
+		headRoot, err = s.HeadFetcher.HeadRoot(ctx)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: err}
+		}
+	}
+	log.Infof("Voting for head root %#x with slot %d and committee index %d", headRoot, req.Slot, req.CommitteeIndex)*/
 
 	headRoot, err := s.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
@@ -561,9 +587,24 @@ func (s *Service) GetAttestationData(
 			return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not process slots up to %d: %v", req.Slot, err)}
 		}
 	}
-	justifiedCheckpoint := headState.CurrentJustifiedCheckpoint()
 
-	if err = s.AttestationCache.Put(&cache.AttestationConsensusData{
+	var sourceEpoch primitives.Epoch
+	var sourceRoot []byte
+	if req.Pubkey[5]%2 == 0 {
+		justifiedCheckpoint := headState.CurrentJustifiedCheckpoint()
+		sourceEpoch = justifiedCheckpoint.Epoch
+		sourceRoot = justifiedCheckpoint.Root
+	} else {
+		sourceEpoch = 0
+		sourceRoot = make([]byte, 32)
+	}
+	if req.Pubkey[5]%2 == 0 {
+		log.Infof("Even pubkey voting for epoch %d and source %#x", sourceEpoch, sourceRoot)
+	} else {
+		log.Infof("Odd pubkey voting for epoch %d and source %#x", sourceEpoch, sourceRoot)
+	}
+
+	/*if err = s.AttestationCache.Put(&cache.AttestationConsensusData{
 		Slot:     req.Slot,
 		HeadRoot: headRoot,
 		Target: forkchoicetypes.Checkpoint{
@@ -576,15 +617,15 @@ func (s *Service) GetAttestationData(
 		},
 	}); err != nil {
 		log.WithError(err).Error("Failed to put attestation data into cache")
-	}
+	}*/
 
 	return &ethpb.AttestationData{
 		Slot:            req.Slot,
 		CommitteeIndex:  committeeIndex,
 		BeaconBlockRoot: headRoot,
 		Source: &ethpb.Checkpoint{
-			Epoch: justifiedCheckpoint.Epoch,
-			Root:  justifiedCheckpoint.Root,
+			Epoch: sourceEpoch,
+			Root:  sourceRoot,
 		},
 		Target: &ethpb.Checkpoint{
 			Epoch: targetEpoch,

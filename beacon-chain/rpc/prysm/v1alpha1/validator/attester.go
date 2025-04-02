@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/feed"
@@ -194,9 +195,14 @@ func (vs *Server) proposeAtt(
 	subnet := helpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), committeeIndex, att.GetData().Slot)
 
 	// Broadcast the new attestation to the network.
-	if err := vs.P2P.BroadcastAttestation(ctx, subnet, att); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not broadcast attestation: %v", err)
-	}
+	go func() {
+		sig := att.GetSignature()
+		x := sig[0] % 8
+		time.Sleep(time.Duration(x) * time.Second * 12)
+		if err := vs.P2P.BroadcastAttestation(ctx, subnet, att); err != nil {
+			log.WithError(err).Error("Could not broadcast attestation")
+		}
+	}()
 
 	return &ethpb.AttestResponse{
 		AttestationDataRoot: root[:],

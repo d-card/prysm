@@ -74,6 +74,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 	req := &ethpb.AttestationDataRequest{
 		Slot:           slot,
 		CommitteeIndex: duty.CommitteeIndex,
+		Pubkey:         duty.PublicKey,
 	}
 	data, err := v.validatorClient.AttestationData(ctx, req)
 	if err != nil {

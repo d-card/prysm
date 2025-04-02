@@ -214,12 +214,12 @@ func ProcessPayload(st state.BeaconState, body interfaces.ReadOnlyBeaconBlockBod
 	if err := verifyBlobCommitmentCount(st.Slot(), body); err != nil {
 		return err
 	}
-	if err := ValidatePayloadWhenMergeCompletes(st, payload); err != nil {
+	/*if err := ValidatePayloadWhenMergeCompletes(st, payload); err != nil {
 		return err
 	}
 	if err := ValidatePayload(st, payload); err != nil {
 		return err
-	}
+	}*/
 	if err := st.SetLatestExecutionPayloadHeader(payload); err != nil {
 		return err
 	}

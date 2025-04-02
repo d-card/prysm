@@ -70,7 +70,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	GenesisDelay:             604800, // 1 week.
 
 	// Misc constant.
-	TargetCommitteeSize:            128,
+	TargetCommitteeSize:            16,
 	MaxValidatorsPerCommittee:      2048,
 	MaxCommitteesPerSlot:           64,
 	MinPerEpochChurnLimit:          4,

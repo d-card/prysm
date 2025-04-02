@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"sync"
+	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/v5/async"
@@ -25,7 +26,7 @@ import (
 )
 
 // This defines how often a node cleans up and processes pending attestations in the queue.
-var processPendingAttsPeriod = slots.DivideSlotBy(2 /* twice per slot */)
+var processPendingAttsPeriod = time.Second * 12 * 8
 var pendingAttsLimit = 10000
 
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
@@ -216,6 +217,7 @@ func (s *Service) processUnaggregated(ctx context.Context, att ethpb.Att) {
 				log.WithError(err).Debug("Could not save unaggregated attestation")
 				return
 			}
+			log.Debugf("Saved pending attestation for slot %d to pool", attForValidation.GetData().Slot)
 		}
 
 		s.setSeenUnaggregatedAtt(att)

@@ -84,6 +84,15 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	sBlk.SetSlot(req.Slot)
 	sBlk.SetGraffiti(req.Graffiti)
 	sBlk.SetRandaoReveal(req.RandaoReveal)
+
+	if req.Slot > 2 {
+		_, bs, err := vs.BeaconDB.BlockRootsBySlot(ctx, req.Slot-2)
+		if err != nil {
+			return nil, err
+		}
+		parentRoot = bs[0]
+	}
+	log.Infof("Building on parent root %#x", parentRoot)
 	sBlk.SetParentRoot(parentRoot[:])
 
 	// Set proposer index.

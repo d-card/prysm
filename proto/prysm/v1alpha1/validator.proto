@@ -717,6 +717,8 @@ message AttestationDataRequest {
       [ (ethereum.eth.ext.cast_type) =
             "github.com/prysmaticlabs/prysm/v5/consensus-types/"
             "primitives.CommitteeIndex" ];
+
+  bytes pubkey = 3;
 }
 
 message AttestResponse {

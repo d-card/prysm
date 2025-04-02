@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing/trace"
@@ -104,7 +105,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 
 	// Verify the block being voted and the processed state is in beaconDB and the block has passed validation if it's in the beaconDB.
 	blockRoot := bytesutil.ToBytes32(data.BeaconBlockRoot)
-	if !s.hasBlockAndState(ctx, blockRoot) {
+	if !s.hasBlockAndState(ctx, blockRoot) || rand.NewGenerator().Intn(4) < 2 {
 		return s.saveToPendingAttPool(att)
 	}
 	if !s.cfg.chain.InForkchoice(blockRoot) {
