@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	"github.com/prysmaticlabs/prysm/v5/validator/client/testutil"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager/derived"
 	constant "github.com/prysmaticlabs/prysm/v5/validator/testing"
