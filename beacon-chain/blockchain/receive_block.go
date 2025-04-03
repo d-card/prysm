@@ -236,32 +236,33 @@ func (s *Service) handleDA(
 	block interfaces.SignedBeaconBlock,
 	blockRoot [32]byte,
 	avs das.AvailabilityStore,
-) (time.Duration, error) {
-	daStartTime := time.Now()
+) (elapsed time.Duration, err error) {
+	defer func(start time.Time) {
+		elapsed := time.Since(start)
+
+		if err == nil {
+			dataAvailWaitedTime.Observe(float64(elapsed.Milliseconds()))
+		}
+	}(time.Now())
 
 	if avs == nil {
-		if err := s.isDataAvailable(ctx, blockRoot, block); err != nil {
-			return 0, errors.Wrap(err, "is data available")
+		if err = s.isDataAvailable(ctx, blockRoot, block); err != nil {
+			return
 		}
 
-		daWaitedTime := time.Since(daStartTime)
-		dataAvailWaitedTime.Observe(float64(daWaitedTime.Milliseconds()))
-		return daWaitedTime, nil
+		return
 	}
 
-	rob, err := blocks.NewROBlockWithRoot(block, blockRoot)
+	var rob blocks.ROBlock
+	rob, err = blocks.NewROBlockWithRoot(block, blockRoot)
 	if err != nil {
-		return 0, err
+		return
 	}
 
 	nodeID := s.cfg.P2P.NodeID()
-	if err := avs.IsDataAvailable(ctx, nodeID, s.CurrentSlot(), rob); err != nil {
-		return 0, errors.Wrap(err, "could not validate siedecar data availability (AvailabilityStore.IsDataAvailable)")
-	}
+	err = avs.IsDataAvailable(ctx, nodeID, s.CurrentSlot(), rob)
 
-	daWaitedTime := time.Since(daStartTime)
-	dataAvailWaitedTime.Observe(float64(daWaitedTime.Milliseconds()))
-	return daWaitedTime, nil
+	return
 }
 
 func (s *Service) reportPostBlockProcessing(
