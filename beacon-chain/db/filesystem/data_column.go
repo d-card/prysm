@@ -28,25 +28,27 @@ import (
 )
 
 const (
-	version                                    int = 0x01
-	versionSize                                    = 1           //bytes
-	maxSszEncodedDataColumnSidecarSize             = 536_870_912 // 2**(4*8) / 8 bytes
-	encodedSszEncodedDataColumnSidecarSizeSize     = 4           // bytes (size of the encoded size of the SSZ encoded data column sidecar)
-	mandatoryNumberOfColumns                       = 128         // 2**7
-	limit                                          = mandatoryNumberOfColumns
-	headerSize                                     = versionSize + encodedSszEncodedDataColumnSidecarSizeSize + mandatoryNumberOfColumns
-	dataColumnsFileExtension                       = "sszs"
-	prunePeriod                                    = 1 * time.Minute
+	version                                      = 0x01
+	versionOffset                                = 0           // bytes
+	versionSize                                  = 1           // bytes
+	maxSszEncodedDataColumnSidecarSize           = 536_870_912 // 2**(4*8) / 8 bytes
+	encodedSszEncodedDataColumnSidecarSizeOffset = versionOffset + versionSize
+	encodedSszEncodedDataColumnSidecarSizeSize   = 4   // bytes (size of the encoded size of the SSZ encoded data column sidecar)
+	mandatoryNumberOfColumns                     = 128 // 2**7
+	indicesOffset                                = encodedSszEncodedDataColumnSidecarSizeOffset + encodedSszEncodedDataColumnSidecarSizeSize
+	indicesSize                                  = mandatoryNumberOfColumns
+	limit                                        = mandatoryNumberOfColumns
+	headerSize                                   = versionSize + encodedSszEncodedDataColumnSidecarSizeSize + mandatoryNumberOfColumns
+	dataColumnsFileExtension                     = "sszs"
+	prunePeriod                                  = 1 * time.Minute
 )
 
 var (
 	errWrongNumberOfColumns                 = errors.New("wrong number of data columns")
 	errDataColumnIndexTooLarge              = errors.New("data column index too large")
 	errWrongBytesWritten                    = errors.New("wrong number of bytes written")
-	errWrongBytesVersionRead                = errors.New("wrong number of bytes version read")
 	errWrongVersion                         = errors.New("wrong version")
-	errWrongBytesDataColumnSidecarSizeRead  = errors.New("wrong number of bytes data column sidecar size read")
-	errWrongBytesIndicesRead                = errors.New("wrong number of bytes indices read")
+	errWrongBytesHeaderRead                 = errors.New("wrong number of bytes header read")
 	errWrongFileSize                        = errors.New("wrong file size")
 	errTooManyDataColumns                   = errors.New("too many data columns")
 	errWrongSszEncodedDataColumnSidecarSize = errors.New("wrong SSZ encoded data column sidecar size")
@@ -795,22 +797,17 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsNewFile(filePath string, inp
 // metadata runs file sanity checks and retrieves metadata of the file.
 // The file descriptor is left at the beginning of the first SSZ encoded data column sidecar.
 func (dcs *DataColumnStorage) metadata(file afero.File) (*metadata, error) {
-	// Seek to the beginning of the file.
-	_, err := file.Seek(0, io.SeekStart)
+	var header [headerSize]byte
+	countRead, err := file.ReadAt(header[:], 0)
 	if err != nil {
-		return nil, errors.Wrap(err, "seek")
+		return nil, errors.Wrap(err, "read at")
+	}
+	if countRead != headerSize {
+		return nil, errWrongBytesHeaderRead
 	}
 
 	// Read the encoded file version.
-	var encodedFileVersion [versionSize]byte
-	countRead, err := file.Read(encodedFileVersion[:])
-	if err != nil {
-		return nil, errors.Wrap(err, "read file version")
-	}
-
-	if countRead != versionSize {
-		return nil, errWrongBytesVersionRead
-	}
+	encodedFileVersion := header[versionOffset : versionOffset+versionSize]
 
 	// Convert the version to an int.
 	fileVersion := int(encodedFileVersion[0])
@@ -821,28 +818,14 @@ func (dcs *DataColumnStorage) metadata(file afero.File) (*metadata, error) {
 	}
 
 	// DataColumnSidecar is a variable sized ssz object, but all data columns for a block will be the same size.
-	// Saving the size of the sidecars for the block at bytes [1:5] allows us to represent offsets as multiples of this value, for compactness.
-	var encodedSszEncodedDataColumnSidecarSize [encodedSszEncodedDataColumnSidecarSizeSize]byte
-	countRead, err = file.Read(encodedSszEncodedDataColumnSidecarSize[:])
-	if err != nil {
-		return nil, errors.Wrap(err, "read SSZ encoded data column sidecar size")
-	}
-	if countRead != encodedSszEncodedDataColumnSidecarSizeSize {
-		return nil, errWrongBytesDataColumnSidecarSizeRead
-	}
+	encodedSszEncodedDataColumnSidecarSize := header[encodedSszEncodedDataColumnSidecarSizeOffset : encodedSszEncodedDataColumnSidecarSizeOffset+encodedSszEncodedDataColumnSidecarSizeSize]
 
 	// Convert the SSZ encoded data column sidecar size to an int.
-	sszEncodedDataColumnSidecarSize := binary.BigEndian.Uint32(encodedSszEncodedDataColumnSidecarSize[:])
+	sszEncodedDataColumnSidecarSize := binary.BigEndian.Uint32(encodedSszEncodedDataColumnSidecarSize)
 
 	// Read the data column indices.
 	var indices [mandatoryNumberOfColumns]byte
-	countRead, err = file.Read(indices[:])
-	if err != nil {
-		return nil, errors.Wrap(err, "read data column indices")
-	}
-	if countRead != mandatoryNumberOfColumns {
-		return nil, errWrongBytesIndicesRead
-	}
+	copy(indices[:], header[indicesOffset:indicesOffset+mandatoryNumberOfColumns])
 
 	// Retrieve the statistics of the file.
 	fileStat, err := file.Stat()
