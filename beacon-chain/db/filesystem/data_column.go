@@ -37,7 +37,7 @@ const (
 	mandatoryNumberOfColumns                     = 128 // 2**7
 	indicesOffset                                = encodedSszEncodedDataColumnSidecarSizeOffset + encodedSszEncodedDataColumnSidecarSizeSize
 	indicesSize                                  = mandatoryNumberOfColumns
-	limit                                        = mandatoryNumberOfColumns
+	nonZeroOffset                                = mandatoryNumberOfColumns
 	headerSize                                   = versionSize + encodedSszEncodedDataColumnSidecarSizeSize + mandatoryNumberOfColumns
 	dataColumnsFileExtension                     = "sszs"
 	prunePeriod                                  = 1 * time.Minute
@@ -217,7 +217,7 @@ func (dcs *DataColumnStorage) WarmCache() {
 		indices := make([]uint64, 0, len(metadata.indices))
 		for index, i := range metadata.indices {
 			// Skip if the data column is not saved.
-			if i < limit {
+			if i < nonZeroOffset {
 				continue
 			}
 
@@ -419,12 +419,12 @@ func (dcs *DataColumnStorage) Get(root [fieldparams.RootLength]byte, indices []u
 	verifiedRODataColumnSidecars := make([]blocks.VerifiedRODataColumn, 0, len(indices))
 	for _, index := range indices {
 		// Skip if the data column is not saved.
-		if metadata.indices[index] < limit {
+		if metadata.indices[index] < nonZeroOffset {
 			continue
 		}
 
 		// Compute the offset of the data column sidecar.
-		offset := headerSize + int64(metadata.indices[index]-limit)*int64(metadata.sszEncodedDataColumnSidecarSize)
+		offset := headerSize + int64(metadata.indices[index]-nonZeroOffset)*int64(metadata.sszEncodedDataColumnSidecarSize)
 
 		// Seek to the beginning of the data column sidecar.
 		_, err := file.Seek(offset, io.SeekStart)
@@ -636,7 +636,7 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsExistingFile(filePath string
 			dataColumnIndex := dataColumnSidecar.ColumnIndex
 
 			// Skip if the data column is already saved.
-			if metadata.indices[dataColumnIndex] >= limit {
+			if metadata.indices[dataColumnIndex] >= nonZeroOffset {
 				continue
 			}
 
@@ -663,7 +663,7 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsExistingFile(filePath string
 
 			// Alter indices to mark the data column as saved.
 			// savedDataColumnsCount can safely be cast to uint8 since we have checked it is less than mandatoryNumberOfColumns.
-			metadata.indices[dataColumnIndex] = limit + uint8(metadata.savedDataColumnSidecarCount)
+			metadata.indices[dataColumnIndex] = nonZeroOffset + uint8(metadata.savedDataColumnSidecarCount)
 			metadata.savedDataColumnSidecarCount++
 
 			// Append the SSZ encoded data column sidecar to the SSZ encoded data column sidecars.
@@ -717,13 +717,13 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsNewFile(filePath string, inp
 			dataColumnIndex := dataColumnSidecar.ColumnIndex
 
 			// Skip if the data column is already stored.
-			if indices[dataColumnIndex] >= limit {
+			if indices[dataColumnIndex] >= nonZeroOffset {
 				continue
 			}
 
 			// Alter the indices to mark the first data column sidecar as saved.
 			// savedCount can safely be cast to uint8 since it is less than limit.
-			indices[dataColumnIndex] = limit + uint8(storedCount)
+			indices[dataColumnIndex] = nonZeroOffset + uint8(storedCount)
 
 			// Increment the count of the saved SSZ encoded data column sidecar.
 			storedCount++
@@ -831,7 +831,7 @@ func (dcs *DataColumnStorage) metadata(file afero.File) (*metadata, error) {
 	// Compute the saved columns count.
 	savedDataColumnSidecarCount := int64(0)
 	for _, index := range indices {
-		if index >= limit {
+		if index >= nonZeroOffset {
 			savedDataColumnSidecarCount++
 		}
 	}

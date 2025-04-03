@@ -251,8 +251,8 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 				fileName:  "0/0/0x0100000000000000000000000000000000000000000000000000000000000000.sszs",
 				blockRoot: [fieldparams.RootLength]byte{1},
 				expectedIndices: [mandatoryNumberOfColumns]byte{
-					0, limit + 4, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, limit + 1, limit, limit + 2, 0, limit + 3,
+					0, nonZeroOffset + 4, 0, 0, 0, 0, 0, 0,
+					0, 0, 0, nonZeroOffset + 1, nonZeroOffset, nonZeroOffset + 2, 0, nonZeroOffset + 3,
 					// The rest is filled with zeroes.
 				},
 				dataColumnParams: []verification.DataColumnParams{
@@ -268,7 +268,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 				blockRoot: [fieldparams.RootLength]byte{2},
 				expectedIndices: [mandatoryNumberOfColumns]byte{
 					0, 0, 0, 0, 0, 0, 0, 0,
-					0, 0, 0, 0, limit, limit + 1, 0, 0,
+					0, 0, 0, 0, nonZeroOffset, nonZeroOffset + 1, 0, 0,
 					// The rest is filled with zeroes.
 				},
 				dataColumnParams: []verification.DataColumnParams{
@@ -280,7 +280,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 				fileName:  "0/0/0x0300000000000000000000000000000000000000000000000000000000000000.sszs",
 				blockRoot: [fieldparams.RootLength]byte{3},
 				expectedIndices: [mandatoryNumberOfColumns]byte{
-					0, 0, limit + 1, 0, 0, 0, limit, 0,
+					0, 0, nonZeroOffset + 1, 0, 0, 0, nonZeroOffset, 0,
 					// The rest is filled with zeroes.
 				},
 				dataColumnParams: []verification.DataColumnParams{
