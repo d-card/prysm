@@ -6,7 +6,6 @@ go_library(
         "beacon_block_converter_mock.go",
         "duties_mock.go",
         "genesis_mock.go",
-        "json_rest_handler_mock.go",
         "state_validators_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock",

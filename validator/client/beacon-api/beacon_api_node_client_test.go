@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	mock2 "github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -120,7 +121,7 @@ func TestGetGenesis(t *testing.T) {
 			)
 
 			depositContractJson := structs.GetDepositContractResponse{}
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 
 			if testCase.queriesDepositContract {
 				jsonRestHandler.EXPECT().Get(
@@ -201,7 +202,7 @@ func TestGetSyncStatus(t *testing.T) {
 			ctx := context.Background()
 
 			syncingResponse := structs.SyncStatusResponse{}
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
 				gomock.Any(),
 				syncingEndpoint,
@@ -265,7 +266,7 @@ func TestGetVersion(t *testing.T) {
 			ctx := context.Background()
 
 			var versionResponse structs.GetVersionResponse
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
 				gomock.Any(),
 				versionEndpoint,

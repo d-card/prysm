@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v5/api"
+	mock2 "github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -14,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"go.uber.org/mock/gomock"
 )
 
@@ -51,7 +52,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 		nil,
 	).Times(1)
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
 		prysmChainClient: prysmChainClient{
@@ -68,7 +69,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
 	).Return(
-		iface.ErrNotSupported,
+		api.ErrNotSupported,
 	).Times(1)
 
 	actualValidatorStatusResponse, err := validatorClient.ValidatorStatus(
@@ -166,7 +167,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 		nil,
 	).Times(1)
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 
 	// Expect node version endpoint call.
 	var nodeVersionResponse structs.GetVersionResponse
@@ -175,7 +176,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
 	).Return(
-		iface.ErrNotSupported,
+		api.ErrNotSupported,
 	).Times(1)
 
 	validatorClient := beaconApiValidatorClient{
@@ -318,7 +319,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		nil,
 	).Times(1)
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 
 	// Expect node version endpoint call.
 	var nodeVersionResponse structs.GetVersionResponse
@@ -466,7 +467,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 		nil,
 	).Times(1)
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 
 	// Expect node version endpoint call.
 	var nodeVersionResponse structs.GetVersionResponse
@@ -475,7 +476,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
 	).Return(
-		iface.ErrNotSupported,
+		api.ErrNotSupported,
 	).Times(1)
 
 	wantedValidatorsPubKey := [][]byte{validatorPubKey}
@@ -705,7 +706,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					testCase.inputGetStateValidatorsInterface.outputErr,
 				).Times(1)
 
-				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+				jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 
 				// Expect node version endpoint call.
 				var nodeVersionResponse structs.GetVersionResponse
@@ -714,7 +715,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					"/eth/v1/node/version",
 					&nodeVersionResponse,
 				).Return(
-					iface.ErrNotSupported,
+					api.ErrNotSupported,
 				).Times(testCase.validatorCountCalled)
 
 				validatorClient := beaconApiValidatorClient{

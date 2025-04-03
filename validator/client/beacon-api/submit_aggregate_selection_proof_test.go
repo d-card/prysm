@@ -9,13 +9,13 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	testhelpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
 	"go.uber.org/mock/gomock"
 )
@@ -97,7 +97,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 			// Call node syncing endpoint to check if head is optimistic.
 			jsonRestHandler.EXPECT().Get(
@@ -217,7 +217,7 @@ func TestSubmitAggregateSelectionProofFallBack(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	// Call node syncing endpoint to check if head is optimistic.
 	jsonRestHandler.EXPECT().Get(
@@ -389,7 +389,7 @@ func TestSubmitAggregateSelectionProofElectra(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 			// Call node syncing endpoint to check if head is optimistic.
 			jsonRestHandler.EXPECT().Get(

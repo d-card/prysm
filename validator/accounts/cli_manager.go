@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	beaconApi "github.com/prysmaticlabs/prysm/v5/api/client"
 	grpcutil "github.com/prysmaticlabs/prysm/v5/api/grpc"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
-	beaconApi "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
 	iface "github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	nodeClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/node-client-factory"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v5/validator/client/validator-client-factory"

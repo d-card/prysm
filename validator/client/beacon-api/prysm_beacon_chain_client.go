@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api"
+	"github.com/prysmaticlabs/prysm/v5/api/client"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	validator2 "github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -17,7 +19,7 @@ import (
 )
 
 // NewPrysmChainClient returns implementation of iface.PrysmChainClient.
-func NewPrysmChainClient(jsonRestHandler JsonRestHandler, nodeClient iface.NodeClient) iface.PrysmChainClient {
+func NewPrysmChainClient(jsonRestHandler client.JsonRestHandler, nodeClient iface.NodeClient) iface.PrysmChainClient {
 	return prysmChainClient{
 		jsonRestHandler: jsonRestHandler,
 		nodeClient:      nodeClient,
@@ -25,7 +27,7 @@ func NewPrysmChainClient(jsonRestHandler JsonRestHandler, nodeClient iface.NodeC
 }
 
 type prysmChainClient struct {
-	jsonRestHandler JsonRestHandler
+	jsonRestHandler client.JsonRestHandler
 	nodeClient      iface.NodeClient
 }
 
@@ -37,7 +39,7 @@ func (c prysmChainClient) ValidatorCount(ctx context.Context, stateID string, st
 	}
 
 	if !strings.Contains(strings.ToLower(nodeVersion.Version), "prysm") {
-		return nil, iface.ErrNotSupported
+		return nil, api.ErrNotSupported
 	}
 
 	queryParams := neturl.Values{}
@@ -84,7 +86,7 @@ func (c prysmChainClient) ValidatorPerformance(ctx context.Context, in *ethpb.Va
 	}
 
 	if !strings.Contains(strings.ToLower(nodeVersion.Version), "prysm") {
-		return nil, iface.ErrNotSupported
+		return nil, api.ErrNotSupported
 	}
 
 	request, err := json.Marshal(structs.GetValidatorPerformanceRequest{

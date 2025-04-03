@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	"go.uber.org/mock/gomock"
 )
 
@@ -105,7 +105,7 @@ func TestProposeBeaconBlock_Error(t *testing.T) {
 				defer ctrl.Finish()
 
 				ctx := context.Background()
-				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+				jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 				headers := map[string]string{"Eth-Consensus-Version": testCase.consensusVersion}
 				jsonRestHandler.EXPECT().Post(

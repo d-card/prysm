@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	mock2 "github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -289,7 +290,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 
 			if testCase.getSyncingOutput != nil {
 				syncingResponseJson := structs.SyncStatusResponse{}
@@ -723,7 +724,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 
 			if testCase.getSyncingOutput != nil {
 				syncingResponseJson := structs.SyncStatusResponse{}

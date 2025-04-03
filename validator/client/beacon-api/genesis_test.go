@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	"go.uber.org/mock/gomock"
 )
 
@@ -19,7 +19,7 @@ func TestGetGenesis_ValidGenesis(t *testing.T) {
 	ctx := context.Background()
 
 	genesisResponseJson := structs.GetGenesisResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		"/eth/v1/beacon/genesis",
@@ -51,7 +51,7 @@ func TestGetGenesis_NilData(t *testing.T) {
 	ctx := context.Background()
 
 	genesisResponseJson := structs.GetGenesisResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		"/eth/v1/beacon/genesis",
@@ -75,7 +75,7 @@ func TestGetGenesis_EndpointCalledOnlyOnce(t *testing.T) {
 	ctx := context.Background()
 
 	genesisResponseJson := structs.GetGenesisResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		"/eth/v1/beacon/genesis",
@@ -109,7 +109,7 @@ func TestGetGenesis_EndpointCanBeCalledAgainAfterError(t *testing.T) {
 	ctx := context.Background()
 
 	genesisResponseJson := structs.GetGenesisResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		"/eth/v1/beacon/genesis",

@@ -1,4 +1,4 @@
-package beacon_api
+package client
 
 import (
 	"bytes"

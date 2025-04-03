@@ -8,11 +8,11 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	"go.uber.org/mock/gomock"
 )
 
@@ -96,7 +96,7 @@ func TestGetFork_Nominal(t *testing.T) {
 	defer ctrl.Finish()
 
 	stateForkResponseJson := structs.GetStateForkResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	expected := structs.GetStateForkResponse{
 		Data: &structs.Fork{
@@ -132,7 +132,7 @@ func TestGetFork_Invalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	ctx := context.Background()
 
@@ -159,7 +159,7 @@ func TestGetHeaders_Nominal(t *testing.T) {
 	defer ctrl.Finish()
 
 	blockHeadersResponseJson := structs.GetBlockHeadersResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	expected := structs.GetBlockHeadersResponse{
 		Data: []*structs.SignedBeaconBlockHeaderContainer{
@@ -199,7 +199,7 @@ func TestGetHeaders_Invalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	ctx := context.Background()
 
@@ -246,7 +246,7 @@ func TestGetLiveness_Nominal(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		livenessEndpoint,
@@ -273,7 +273,7 @@ func TestGetLiveness_Invalid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		livenessEndpoint,
@@ -313,7 +313,7 @@ func TestGetIsSyncing_Nominal(t *testing.T) {
 			defer ctrl.Finish()
 
 			syncingResponseJson := structs.SyncStatusResponse{}
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 			expected := structs.SyncStatusResponse{
 				Data: &structs.SyncStatusResponseData{
@@ -350,7 +350,7 @@ func TestGetIsSyncing_Invalid(t *testing.T) {
 	defer ctrl.Finish()
 
 	syncingResponseJson := structs.SyncStatusResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	ctx := context.Background()
 

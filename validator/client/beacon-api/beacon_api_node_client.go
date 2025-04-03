@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/client"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -20,7 +21,7 @@ var (
 
 type beaconApiNodeClient struct {
 	fallbackClient  iface.NodeClient
-	jsonRestHandler JsonRestHandler
+	jsonRestHandler client.JsonRestHandler
 	genesisProvider GenesisProvider
 	healthTracker   *beacon.NodeHealthTracker
 }
@@ -111,7 +112,7 @@ func (c *beaconApiNodeClient) HealthTracker() *beacon.NodeHealthTracker {
 	return c.healthTracker
 }
 
-func NewNodeClientWithFallback(jsonRestHandler JsonRestHandler, fallbackClient iface.NodeClient) iface.NodeClient {
+func NewNodeClientWithFallback(jsonRestHandler client.JsonRestHandler, fallbackClient iface.NodeClient) iface.NodeClient {
 	b := &beaconApiNodeClient{
 		jsonRestHandler: jsonRestHandler,
 		fallbackClient:  fallbackClient,

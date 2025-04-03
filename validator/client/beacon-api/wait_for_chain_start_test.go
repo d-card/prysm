@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -22,7 +22,7 @@ func TestWaitForChainStart_ValidGenesis(t *testing.T) {
 
 	ctx := context.Background()
 	genesisResponseJson := structs.GetGenesisResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		"/eth/v1/beacon/genesis",
@@ -89,7 +89,7 @@ func TestWaitForChainStart_BadGenesis(t *testing.T) {
 
 			ctx := context.Background()
 			genesisResponseJson := structs.GetGenesisResponse{}
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
 				gomock.Any(),
 				"/eth/v1/beacon/genesis",
@@ -117,7 +117,7 @@ func TestWaitForChainStart_JsonResponseError(t *testing.T) {
 
 	ctx := context.Background()
 	genesisResponseJson := structs.GetGenesisResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		"/eth/v1/beacon/genesis",
@@ -140,7 +140,7 @@ func TestWaitForChainStart_JsonResponseError404(t *testing.T) {
 
 	ctx := context.Background()
 	genesisResponseJson := structs.GetGenesisResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	// First, mock a request that receives a 404 error (which means that the genesis data is not available yet)
 	jsonRestHandler.EXPECT().Get(

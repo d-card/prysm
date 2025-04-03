@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	"go.uber.org/mock/gomock"
 )
 
@@ -29,7 +29,7 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 
 	jsonRestHandler.EXPECT().Get(
@@ -181,7 +181,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 			defer ctrl.Finish()
 
 			produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
 				gomock.Any(),
 				"/eth/v1/validator/attestation_data?committee_index=2&slot=1",
@@ -209,7 +209,7 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),

@@ -3,12 +3,9 @@ package iface
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 )
-
-var ErrNotSupported = errors.New("endpoint not supported")
 
 type ValidatorCount struct {
 	Status string

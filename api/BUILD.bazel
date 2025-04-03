@@ -4,12 +4,14 @@ go_library(
     name = "go_default_library",
     srcs = [
         "constants.go",
+        "errors.go",
         "headers.go",
         "jwt.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/api",
     visibility = ["//visibility:public"],
     deps = [
+        "//api/client:go_default_library",
         "//crypto/rand:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

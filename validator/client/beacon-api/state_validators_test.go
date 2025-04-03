@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	"go.uber.org/mock/gomock"
 )
 
@@ -34,7 +34,7 @@ func TestGetStateValidators_Nominal_POST(t *testing.T) {
 	require.NoError(t, err)
 
 	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	wanted := []*structs.ValidatorContainer{
 		{
@@ -120,7 +120,7 @@ func TestGetStateValidators_Nominal_GET(t *testing.T) {
 	require.NoError(t, err)
 
 	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	wanted := []*structs.ValidatorContainer{
 		{
@@ -220,7 +220,7 @@ func TestGetStateValidators_GetRestJsonResponseOnError(t *testing.T) {
 	require.NoError(t, err)
 
 	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	ctx := context.Background()
 
@@ -277,7 +277,7 @@ func TestGetStateValidators_DataIsNil_POST(t *testing.T) {
 
 	ctx := context.Background()
 	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
@@ -316,7 +316,7 @@ func TestGetStateValidators_DataIsNil_GET(t *testing.T) {
 
 	ctx := context.Background()
 	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	// First call POST which will return an error.
 	jsonRestHandler.EXPECT().Post(

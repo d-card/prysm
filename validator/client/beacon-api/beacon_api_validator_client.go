@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/client"
 	"github.com/prysmaticlabs/prysm/v5/api/client/event"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
@@ -22,13 +23,13 @@ type beaconApiValidatorClient struct {
 	genesisProvider         GenesisProvider
 	dutiesProvider          dutiesProvider
 	stateValidatorsProvider StateValidatorsProvider
-	jsonRestHandler         JsonRestHandler
+	jsonRestHandler         client.JsonRestHandler
 	beaconBlockConverter    BeaconBlockConverter
 	prysmChainClient        iface.PrysmChainClient
 	isEventStreamRunning    bool
 }
 
-func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...ValidatorClientOpt) iface.ValidatorClient {
+func NewBeaconApiValidatorClient(jsonRestHandler client.JsonRestHandler, opts ...ValidatorClientOpt) iface.ValidatorClient {
 	c := &beaconApiValidatorClient{
 		genesisProvider:         &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
 		dutiesProvider:          beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler},

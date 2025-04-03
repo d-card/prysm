@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	mock2 "github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -28,7 +29,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
@@ -62,7 +63,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
@@ -136,7 +137,7 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockValid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		"/eth/v2/beacon/blocks",
@@ -172,7 +173,7 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockError(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		"/eth/v2/beacon/blocks",
@@ -207,7 +208,7 @@ func TestBeaconApiValidatorClient_Host(t *testing.T) {
 	defer ctrl.Finish()
 
 	hosts := []string{"http://localhost:8080", "http://localhost:8081"}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().SetHost(
 		hosts[0],
 	).Times(1)

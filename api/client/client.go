@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api"
 )
 
 const (
@@ -67,7 +68,7 @@ func urlForHost(h string) (*url.URL, error) {
 	// try to parse as host:port
 	host, port, err := net.SplitHostPort(h)
 	if err != nil {
-		return nil, ErrMalformedHostname
+		return nil, api.ErrMalformedHostname
 	}
 	return &url.URL{Host: net.JoinHostPort(host, port), Scheme: "http"}, nil
 }
@@ -95,7 +96,7 @@ func (c *Client) Get(ctx context.Context, path string, opts ...ReqOption) ([]byt
 		err = r.Body.Close()
 	}()
 	if r.StatusCode != http.StatusOK {
-		return nil, Non200Err(r)
+		return nil, api.Non200Err(r)
 	}
 	b, err := io.ReadAll(io.LimitReader(r.Body, c.maxBodySize))
 	if err != nil {

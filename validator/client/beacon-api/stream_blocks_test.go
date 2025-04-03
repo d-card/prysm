@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	mock2 "github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	rpctesting "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared/testing"
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -25,7 +26,7 @@ func TestStreamBlocks_UnsupportedConsensusVersion(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		gomock.Any(),
@@ -147,7 +148,7 @@ func TestStreamBlocks_Error(t *testing.T) {
 
 					ctx := context.Background()
 
-					jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+					jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 					jsonRestHandler.EXPECT().Get(
 						gomock.Any(),
 						gomock.Any(),
@@ -198,7 +199,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
@@ -359,7 +360,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
@@ -520,7 +521,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
@@ -681,7 +682,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
@@ -842,7 +843,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().

@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/validator/client/validator-client-factory",
     visibility = ["//visibility:public"],
     deps = [
+        "//api/client:go_default_library",
         "//config/features:go_default_library",
         "//validator/client/beacon-api:go_default_library",
         "//validator/client/grpc-api:go_default_library",

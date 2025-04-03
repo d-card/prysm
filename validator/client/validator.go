@@ -20,7 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/api/client"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	eventClient "github.com/prysmaticlabs/prysm/v5/api/client/event"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
@@ -263,7 +263,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 
 	chainStartRes, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	if errors.Is(err, io.EOF) {
-		return client.ErrConnectionIssue
+		return api.ErrConnectionIssue
 	}
 
 	if errors.Is(ctx.Err(), context.Canceled) {
@@ -272,7 +272,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 
 	if err != nil {
 		return errors.Wrap(
-			client.ErrConnectionIssue,
+			api.ErrConnectionIssue,
 			errors.Wrap(err, "could not receive ChainStart from stream").Error(),
 		)
 	}
@@ -325,7 +325,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 
 	s, err := v.nodeClient.SyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
-		return errors.Wrap(client.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
+		return errors.Wrap(api.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 	}
 	if !s.Syncing {
 		return nil
@@ -337,7 +337,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		case <-time.After(slots.DivideSlotBy(2 /* twice per slot */)):
 			s, err := v.nodeClient.SyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
-				return errors.Wrap(client.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
+				return errors.Wrap(api.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 			}
 			if !s.Syncing {
 				return nil
@@ -397,7 +397,7 @@ func (v *validator) CanonicalHeadSlot(ctx context.Context) (primitives.Slot, err
 	defer span.End()
 	head, err := v.chainClient.ChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
-		return 0, errors.Wrap(client.ErrConnectionIssue, err.Error())
+		return 0, errors.Wrap(api.ErrConnectionIssue, err.Error())
 	}
 	return head.HeadSlot, nil
 }

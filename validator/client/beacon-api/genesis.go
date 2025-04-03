@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/client"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -19,7 +20,7 @@ type GenesisProvider interface {
 }
 
 type beaconApiGenesisProvider struct {
-	jsonRestHandler JsonRestHandler
+	jsonRestHandler client.JsonRestHandler
 	genesis         *structs.Genesis
 	once            sync.Once
 }

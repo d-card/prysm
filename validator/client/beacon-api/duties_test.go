@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	mock2 "github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -61,7 +62,7 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 	ctx := context.Background()
 
 	validatorIndices := []primitives.ValidatorIndex{2, 9}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
@@ -89,7 +90,7 @@ func TestGetAttesterDuties_HttpError(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
@@ -113,7 +114,7 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
@@ -157,7 +158,7 @@ func TestGetProposerDuties_Valid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
@@ -183,7 +184,7 @@ func TestGetProposerDuties_HttpError(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
@@ -205,7 +206,7 @@ func TestGetProposerDuties_NilData(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
@@ -232,7 +233,7 @@ func TestGetProposerDuties_NilProposerDuty(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
@@ -285,7 +286,7 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 	ctx := context.Background()
 
 	validatorIndices := []primitives.ValidatorIndex{2, 6}
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
@@ -313,7 +314,7 @@ func TestGetSyncDuties_HttpError(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
@@ -337,7 +338,7 @@ func TestGetSyncDuties_NilData(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
@@ -366,7 +367,7 @@ func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
@@ -416,7 +417,7 @@ func TestGetCommittees_Valid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
@@ -442,7 +443,7 @@ func TestGetCommittees_HttpError(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
@@ -464,7 +465,7 @@ func TestGetCommittees_NilData(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
@@ -491,7 +492,7 @@ func TestGetCommittees_NilCommittee(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		gomock.Any(),
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),

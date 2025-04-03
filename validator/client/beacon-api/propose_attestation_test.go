@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	testhelpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
 	"go.uber.org/mock/gomock"
 )
@@ -107,7 +107,7 @@ func TestProposeAttestation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 			var marshalledAttestations []byte
 			if helpers.ValidateNilAttestation(test.attestation) == nil {
@@ -168,7 +168,7 @@ func TestProposeAttestationFallBack(t *testing.T) {
 	}
 
 	ctrl := gomock.NewController(t)
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	var marshalledAttestations []byte
 	if helpers.ValidateNilAttestation(attestation) == nil {
@@ -295,7 +295,7 @@ func TestProposeAttestationElectra(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 			var marshalledAttestations []byte
 			if helpers.ValidateNilAttestation(test.attestation) == nil {

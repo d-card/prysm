@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	mock2 "github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -116,7 +117,7 @@ func TestListValidators(t *testing.T) {
 			nil,
 		)
 
-		jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+		jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 		jsonRestHandler.EXPECT().Get(gomock.Any(), blockHeaderEndpoint, gomock.Any()).Return(errors.New("bar error"))
 
 		beaconChainClient := beaconApiChainClient{
@@ -189,7 +190,7 @@ func TestListValidators(t *testing.T) {
 					nil,
 				)
 
-				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+				jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 				jsonRestHandler.EXPECT().Get(gomock.Any(), blockHeaderEndpoint, gomock.Any()).Return(
 					nil,
 				).SetArg(
@@ -741,7 +742,7 @@ func TestGetChainHead(t *testing.T) {
 				ctx := context.Background()
 
 				finalityCheckpointsResponse := structs.GetFinalityCheckpointsResponse{}
-				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+				jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 				jsonRestHandler.EXPECT().Get(gomock.Any(), finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
 					testCase.finalityCheckpointsError,
 				).SetArg(
@@ -838,7 +839,7 @@ func TestGetChainHead(t *testing.T) {
 				defer ctrl.Finish()
 				ctx := context.Background()
 
-				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+				jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 
 				finalityCheckpointsResponse := structs.GetFinalityCheckpointsResponse{}
 				jsonRestHandler.EXPECT().Get(gomock.Any(), finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
@@ -868,7 +869,7 @@ func TestGetChainHead(t *testing.T) {
 		defer ctrl.Finish()
 		ctx := context.Background()
 
-		jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+		jsonRestHandler := mock2.NewMockJsonRestHandler(ctrl)
 
 		finalityCheckpointsResponse := structs.GetFinalityCheckpointsResponse{}
 		jsonRestHandler.EXPECT().Get(gomock.Any(), finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(

@@ -1,4 +1,4 @@
-package client
+package api
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/client"
 )
 
 // ErrMalformedHostname is used to indicate if a host name's format is incorrect.
@@ -24,9 +25,12 @@ var ErrInvalidNodeVersion = errors.New("invalid node version response")
 // ErrConnectionIssue represents a connection problem.
 var ErrConnectionIssue = errors.New("could not connect")
 
+// ErrNotSupported represents a connection to a beacon node that is non prysm or wrong version
+var ErrNotSupported = errors.New("endpoint not supported")
+
 // Non200Err is a function that parses an HTTP response to handle responses that are not 200 with a formatted error.
 func Non200Err(r *http.Response) error {
-	b, err := io.ReadAll(io.LimitReader(r.Body, MaxErrBodySize))
+	b, err := io.ReadAll(io.LimitReader(r.Body, client.MaxErrBodySize))
 	var body string
 	if err != nil {
 		body = "(Unable to read response body.)"

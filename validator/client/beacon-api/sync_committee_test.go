@@ -11,13 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	"go.uber.org/mock/gomock"
 )
 
@@ -44,7 +44,7 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 	marshalledJsonRegistrations, err := json.Marshal([]*structs.SyncCommitteeMessage{jsonSyncCommitteeMessage})
 	require.NoError(t, err)
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		"/eth/v1/beacon/pool/sync_committees",
@@ -73,7 +73,7 @@ func TestSubmitSyncMessage_BadRequest(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(
 		gomock.Any(),
 		"/eth/v1/beacon/pool/sync_committees",
@@ -137,7 +137,7 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
 				gomock.Any(),
 				"/eth/v1/beacon/blocks/head/root",
@@ -207,7 +207,7 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
 				gomock.Any(),
 				"/eth/v1/beacon/blocks/head/root",
@@ -314,7 +314,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 			}
 			valsReqBytes, err := json.Marshal(valsReq)
 			require.NoError(t, err)
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Post(
 				gomock.Any(),
 				validatorsEndpoint,

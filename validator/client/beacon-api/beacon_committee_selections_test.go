@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	testhelpers "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/test-helpers"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"go.uber.org/mock/gomock"
@@ -90,7 +90,7 @@ func TestGetAggregatedSelections(t *testing.T) {
 	for _, test := range testcases {
 		t.Run(test.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 			reqBody, err := json.Marshal(test.req)
 			require.NoError(t, err)

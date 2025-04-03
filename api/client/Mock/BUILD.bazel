@@ -1,0 +1,9 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["json_rest_handler_mock.go"],
+    importpath = "github.com/prysmaticlabs/prysm/v5/api/client/Mock",
+    visibility = ["//visibility:public"],
+    deps = ["@org_uber_go_mock//gomock:go_default_library"],
+)

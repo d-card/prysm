@@ -7,12 +7,12 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	"github.com/prysmaticlabs/prysm/v5/validator/client/iface"
 	"go.uber.org/mock/gomock"
 )
@@ -117,7 +117,7 @@ func TestGetValidatorCount(t *testing.T) {
 			defer ctrl.Finish()
 
 			ctx := context.Background()
-			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 			// Expect node version endpoint call.
 			var nodeVersionResponse structs.GetVersionResponse
@@ -178,7 +178,7 @@ func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
 		PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 	})
 	require.NoError(t, err)
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 	// Expect node version endpoint call.
 	var nodeVersionResponse structs.GetVersionResponse
 	jsonRestHandler.EXPECT().Get(

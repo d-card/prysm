@@ -6,18 +6,18 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/api/client/Mock"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	rpctesting "github.com/prysmaticlabs/prysm/v5/beacon-chain/rpc/eth/shared/testing"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api/mock"
 	"go.uber.org/mock/gomock"
 )
 
 func TestProposeBeaconBlock_Deneb(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler := Mock.NewMockJsonRestHandler(ctrl)
 
 	var blockContents structs.SignedBeaconBlockContentsDeneb
 	err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &blockContents)

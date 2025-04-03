@@ -1,6 +1,7 @@
 package validator_client_factory
 
 import (
+	"github.com/prysmaticlabs/prysm/v5/api/client"
 	"github.com/prysmaticlabs/prysm/v5/config/features"
 	beaconApi "github.com/prysmaticlabs/prysm/v5/validator/client/beacon-api"
 	grpcApi "github.com/prysmaticlabs/prysm/v5/validator/client/grpc-api"
@@ -10,7 +11,7 @@ import (
 
 func NewValidatorClient(
 	validatorConn validatorHelpers.NodeConnection,
-	jsonRestHandler beaconApi.JsonRestHandler,
+	jsonRestHandler client.JsonRestHandler,
 	opt ...beaconApi.ValidatorClientOpt,
 ) iface.ValidatorClient {
 	if features.Get().EnableBeaconRESTApi {

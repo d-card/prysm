@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/api/client"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	eventClient "github.com/prysmaticlabs/prysm/v5/api/client/event"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -184,7 +184,7 @@ func (c *grpcValidatorClient) WaitForChainStart(ctx context.Context, in *empty.E
 	stream, err := c.beaconNodeValidatorClient.WaitForChainStart(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(
-			client.ErrConnectionIssue,
+			api.ErrConnectionIssue,
 			errors.Wrap(err, "could not setup beacon chain ChainStart streaming client").Error(),
 		)
 	}
@@ -203,11 +203,11 @@ func (c *grpcValidatorClient) AggregatedSigAndAggregationBits(
 }
 
 func (*grpcValidatorClient) AggregatedSelections(context.Context, []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
-	return nil, iface.ErrNotSupported
+	return nil, api.ErrNotSupported
 }
 
 func (*grpcValidatorClient) AggregatedSyncSelections(context.Context, []iface.SyncCommitteeSelection) ([]iface.SyncCommitteeSelection, error) {
-	return nil, iface.ErrNotSupported
+	return nil, api.ErrNotSupported
 }
 
 func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
@@ -234,7 +234,7 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 	if !containsHead {
 		eventsChannel <- &eventClient.Event{
 			EventType: eventClient.EventConnectionError,
-			Data:      []byte(errors.Wrap(client.ErrConnectionIssue, "gRPC only supports the head topic, and head topic was not passed").Error()),
+			Data:      []byte(errors.Wrap(api.ErrConnectionIssue, "gRPC only supports the head topic, and head topic was not passed").Error()),
 		}
 	}
 	if containsHead && len(topics) > 1 {
@@ -245,7 +245,7 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 	if err != nil {
 		eventsChannel <- &eventClient.Event{
 			EventType: eventClient.EventConnectionError,
-			Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
+			Data:      []byte(errors.Wrap(api.ErrConnectionIssue, err.Error()).Error()),
 		}
 		return
 	}
@@ -263,7 +263,7 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 				if errors.Is(ctx.Err(), context.Canceled) {
 					eventsChannel <- &eventClient.Event{
 						EventType: eventClient.EventConnectionError,
-						Data:      []byte(errors.Wrap(client.ErrConnectionIssue, ctx.Err().Error()).Error()),
+						Data:      []byte(errors.Wrap(api.ErrConnectionIssue, ctx.Err().Error()).Error()),
 					}
 					return
 				}
@@ -278,7 +278,7 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 				c.isEventStreamRunning = false
 				eventsChannel <- &eventClient.Event{
 					EventType: eventClient.EventConnectionError,
-					Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
+					Data:      []byte(errors.Wrap(api.ErrConnectionIssue, err.Error()).Error()),
 				}
 				return
 			}
@@ -307,10 +307,10 @@ func (c *grpcValidatorClient) EventStreamIsRunning() bool {
 }
 
 func (*grpcValidatorClient) Host() string {
-	log.Warn(iface.ErrNotSupported)
+	log.Warn(api.ErrNotSupported)
 	return ""
 }
 
 func (*grpcValidatorClient) SetHost(_ string) {
-	log.Warn(iface.ErrNotSupported)
+	log.Warn(api.ErrNotSupported)
 }

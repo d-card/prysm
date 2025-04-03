@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	api "github.com/prysmaticlabs/prysm/v5/api/client"
+	"github.com/prysmaticlabs/prysm/v5/api"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v5/api/client/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"

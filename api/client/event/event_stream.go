@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/api"
-	"github.com/prysmaticlabs/prysm/v5/api/client"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -91,7 +90,7 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 	if err != nil {
 		eventsChannel <- &Event{
 			EventType: EventConnectionError,
-			Data:      []byte(errors.Wrap(err, client.ErrConnectionIssue.Error()).Error()),
+			Data:      []byte(errors.Wrap(err, api.ErrConnectionIssue.Error()).Error()),
 		}
 		return
 	}
@@ -145,7 +144,7 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 	if err := scanner.Err(); err != nil {
 		eventsChannel <- &Event{
 			EventType: EventConnectionError,
-			Data:      []byte(errors.Wrap(err, errors.Wrap(client.ErrConnectionIssue, "scanner failed").Error()).Error()),
+			Data:      []byte(errors.Wrap(err, errors.Wrap(api.ErrConnectionIssue, "scanner failed").Error()).Error()),
 		}
 	}
 }
