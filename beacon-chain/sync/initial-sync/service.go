@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
@@ -362,9 +361,7 @@ func (s *Service) fetchOriginBlobs(pids []peer.ID) error {
 			return err
 		}
 
-		// node ID is not used for checking blobs data availability.
-		emptyNodeID := enode.ID{}
-		if err := avs.IsDataAvailable(s.ctx, emptyNodeID, current, rob); err != nil {
+		if err := avs.IsDataAvailable(s.ctx, current, rob); err != nil {
 			log.WithField("root", fmt.Sprintf("%#x", r)).WithField("peerID", pids[i]).Warn("Blobs from peer for origin block were unusable")
 			continue
 		}
@@ -417,14 +414,13 @@ func (s *Service) fetchOriginColumns(pids []peer.ID) error {
 
 	// FIXME: It's not clear that the caching layer is doing anything here or in
 	// fetchOriginBlobs, which is presumably where this logic was derived from.
-	avs := das.NewLazilyPersistentStoreColumn(s.cfg.DataColumnStorage, s.cfg.CustodyInfo)
+	avs := das.NewLazilyPersistentStoreColumn(s.cfg.DataColumnStorage, s.cfg.P2P.NodeID(), s.cfg.CustodyInfo)
 	current := s.clock.CurrentSlot()
 	if err := avs.Persist(current, sidecars...); err != nil {
 		return err
 	}
 
-	nodeID := s.cfg.P2P.NodeID()
-	if err := avs.IsDataAvailable(s.ctx, nodeID, current, rob); err != nil {
+	if err := avs.IsDataAvailable(s.ctx, current, rob); err != nil {
 		return fmt.Errorf("couldn't assemble the required columns from peers for checkpoint sync block %#x", r)
 	}
 

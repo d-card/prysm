@@ -49,7 +49,7 @@ var commitments = [][]byte{
 func TestPersist(t *testing.T) {
 	t.Run("no sidecars", func(t *testing.T) {
 		dataColumnStorage := filesystem.NewEphemeralDataColumnStorage(t)
-		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, &peerdas.CustodyInfo{})
+		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, enode.ID{}, &peerdas.CustodyInfo{})
 		err := lazilyPersistentStoreColumns.Persist(0)
 		require.NoError(t, err)
 		require.Equal(t, 0, len(lazilyPersistentStoreColumns.cache.entries))
@@ -64,7 +64,7 @@ func TestPersist(t *testing.T) {
 		}
 
 		roSidecars, _ := roSidecarsFromDataColumnParamsByBlockRoot(t, dataColumnParamsByBlockRoot)
-		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, &peerdas.CustodyInfo{})
+		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, enode.ID{}, &peerdas.CustodyInfo{})
 
 		err := lazilyPersistentStoreColumns.Persist(0, roSidecars...)
 		require.ErrorIs(t, err, errMixedRoots)
@@ -79,7 +79,7 @@ func TestPersist(t *testing.T) {
 		}
 
 		roSidecars, _ := roSidecarsFromDataColumnParamsByBlockRoot(t, dataColumnParamsByBlockRoot)
-		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, &peerdas.CustodyInfo{})
+		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, enode.ID{}, &peerdas.CustodyInfo{})
 
 		err := lazilyPersistentStoreColumns.Persist(1_000_000, roSidecars...)
 		require.NoError(t, err)
@@ -94,7 +94,7 @@ func TestPersist(t *testing.T) {
 		}
 
 		roSidecars, roDataColumns := roSidecarsFromDataColumnParamsByBlockRoot(t, dataColumnParamsByBlockRoot)
-		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, &peerdas.CustodyInfo{})
+		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, enode.ID{}, &peerdas.CustodyInfo{})
 
 		err := lazilyPersistentStoreColumns.Persist(0, roSidecars...)
 		require.NoError(t, err)
@@ -126,9 +126,9 @@ func TestIsDataAvailable(t *testing.T) {
 		signedRoBlock := newSignedRoBlock(t, signedBeaconBlockFulu)
 
 		dataColumnStorage := filesystem.NewEphemeralDataColumnStorage(t)
-		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, &peerdas.CustodyInfo{})
+		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, enode.ID{}, &peerdas.CustodyInfo{})
 
-		err := lazilyPersistentStoreColumns.IsDataAvailable(ctx, enode.ID{}, 0 /*current slot*/, signedRoBlock)
+		err := lazilyPersistentStoreColumns.IsDataAvailable(ctx, 0 /*current slot*/, signedRoBlock)
 		require.NoError(t, err)
 	})
 
@@ -139,8 +139,8 @@ func TestIsDataAvailable(t *testing.T) {
 		signedRoBlock := newSignedRoBlock(t, signedBeaconBlockFulu)
 
 		dataColumnStorage := filesystem.NewEphemeralDataColumnStorage(t)
-		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, &peerdas.CustodyInfo{})
-		err := lazilyPersistentStoreColumns.IsDataAvailable(ctx, enode.ID{}, 0 /*current slot*/, signedRoBlock)
+		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, enode.ID{}, &peerdas.CustodyInfo{})
+		err := lazilyPersistentStoreColumns.IsDataAvailable(ctx, 0 /*current slot*/, signedRoBlock)
 		require.NotNil(t, err)
 	})
 
@@ -152,7 +152,7 @@ func TestIsDataAvailable(t *testing.T) {
 		root := signedRoBlock.Root()
 
 		dataColumnStorage := filesystem.NewEphemeralDataColumnStorage(t)
-		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, &peerdas.CustodyInfo{})
+		lazilyPersistentStoreColumns := NewLazilyPersistentStoreColumn(dataColumnStorage, enode.ID{}, &peerdas.CustodyInfo{})
 
 		indices := [...]uint64{1, 17, 87, 102}
 		dataColumnsParams := make([]filesystem.DataColumnParams, 0, len(indices))
@@ -177,7 +177,7 @@ func TestIsDataAvailable(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		err := lazilyPersistentStoreColumns.IsDataAvailable(ctx, enode.ID{}, 0 /*current slot*/, signedRoBlock)
+		err := lazilyPersistentStoreColumns.IsDataAvailable(ctx, 0 /*current slot*/, signedRoBlock)
 		require.NoError(t, err)
 
 		actual, err := dataColumnStorage.Get(root, indices[:])
@@ -240,7 +240,7 @@ func TestFullCommitmentsToCheck(t *testing.T) {
 			defer flags.Init(resetFlags)
 
 			b := tc.block(t)
-			s := NewLazilyPersistentStoreColumn(nil, &peerdas.CustodyInfo{})
+			s := NewLazilyPersistentStoreColumn(nil, enode.ID{}, &peerdas.CustodyInfo{})
 
 			commitmentsArray, err := s.fullCommitmentsToCheck(enode.ID{}, b, tc.slot)
 			require.NoError(t, err)

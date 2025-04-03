@@ -238,8 +238,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 			}
 		}
 
-		nodeID := s.cfg.P2P.NodeID()
-		if err := avs.IsDataAvailable(ctx, nodeID, s.CurrentSlot(), b); err != nil {
+		if err := avs.IsDataAvailable(ctx, s.CurrentSlot(), b); err != nil {
 			return errors.Wrapf(err, "could not validate sidecar availability at slot %d", b.Block().Slot())
 		}
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b,

@@ -259,8 +259,7 @@ func (s *Service) handleDA(
 		return
 	}
 
-	nodeID := s.cfg.P2P.NodeID()
-	err = avs.IsDataAvailable(ctx, nodeID, s.CurrentSlot(), rob)
+	err = avs.IsDataAvailable(ctx, s.CurrentSlot(), rob)
 
 	return
 }

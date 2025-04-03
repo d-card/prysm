@@ -19,13 +19,15 @@ import (
 // block, at which time they will undergo full verification and be saved to the disk.
 type LazilyPersistentStoreColumn struct {
 	store       *filesystem.DataColumnStorage
+	nodeID      enode.ID
 	cache       *dataColumnCache
 	custodyInfo *peerdas.CustodyInfo
 }
 
-func NewLazilyPersistentStoreColumn(store *filesystem.DataColumnStorage, custodyInfo *peerdas.CustodyInfo) *LazilyPersistentStoreColumn {
+func NewLazilyPersistentStoreColumn(store *filesystem.DataColumnStorage, nodeID enode.ID, custodyInfo *peerdas.CustodyInfo) *LazilyPersistentStoreColumn {
 	return &LazilyPersistentStoreColumn{
 		store:       store,
+		nodeID:      nodeID,
 		cache:       newDataColumnCache(),
 		custodyInfo: custodyInfo,
 	}
@@ -77,11 +79,10 @@ func (s *LazilyPersistentStoreColumn) Persist(current primitives.Slot, sidecars 
 // DataColumnsSidecars already in the db are assumed to have been previously verified against the block.
 func (s *LazilyPersistentStoreColumn) IsDataAvailable(
 	ctx context.Context,
-	nodeID enode.ID,
 	currentSlot primitives.Slot,
 	block blocks.ROBlock,
 ) error {
-	blockCommitments, err := s.fullCommitmentsToCheck(nodeID, block, currentSlot)
+	blockCommitments, err := s.fullCommitmentsToCheck(s.nodeID, block, currentSlot)
 	if err != nil {
 		return errors.Wrapf(err, "full commitments to check with block root `%#x` and current slot `%d`", block.Root(), currentSlot)
 	}
