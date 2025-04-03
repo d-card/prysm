@@ -17,12 +17,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/async"
 	"github.com/prysmaticlabs/prysm/v5/async/event"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/spf13/afero"
 )
@@ -425,38 +425,16 @@ func (dcs *DataColumnStorage) Get(root [fieldparams.RootLength]byte, indices []u
 
 		// Compute the offset of the data column sidecar.
 		offset := headerSize + int64(metadata.indices[index]-nonZeroOffset)*int64(metadata.sszEncodedDataColumnSidecarSize)
-
 		// Seek to the beginning of the data column sidecar.
 		_, err := file.Seek(offset, io.SeekStart)
 		if err != nil {
 			return nil, errors.Wrap(err, "seek")
 		}
 
-		// Read the SSZ encoded data column sidecar.
-		sszEncodedDataColumnSidecar := make([]byte, metadata.sszEncodedDataColumnSidecarSize)
-		count, err := file.Read(sszEncodedDataColumnSidecar)
+		verifiedRODataColumn, err := verification.VerifiedRODataColumnFromDisk(file, root, metadata.sszEncodedDataColumnSidecarSize)
 		if err != nil {
-			return nil, errors.Wrap(err, "read SSZ encoded data column sidecar")
+			return nil, errors.Wrap(err, "verified RO data column from disk")
 		}
-		if uint32(count) != metadata.sszEncodedDataColumnSidecarSize {
-			return nil, errWrongBytesWritten
-		}
-
-		// Unmarshal the SSZ encoded data column sidecar.
-		dataColumnSidecar := &ethpb.DataColumnSidecar{}
-		err = dataColumnSidecar.UnmarshalSSZ(sszEncodedDataColumnSidecar)
-		if err != nil {
-			return nil, errors.Wrap(err, "unmarshal SSZ encoded data column sidecar")
-		}
-
-		// Create a RO data column.
-		roDataColumnSidecar, err := blocks.NewRODataColumn(dataColumnSidecar)
-		if err != nil {
-			return nil, errors.Wrap(err, "new read only data column")
-		}
-
-		// Create a verified RO data column.
-		verifiedRODataColumn := blocks.NewVerifiedRODataColumn(roDataColumnSidecar)
 
 		// Append the verified RO data column to the data column sidecars.
 		verifiedRODataColumnSidecars = append(verifiedRODataColumnSidecars, verifiedRODataColumn)
