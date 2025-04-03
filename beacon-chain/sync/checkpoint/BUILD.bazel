@@ -11,9 +11,9 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/beacon-chain/sync/checkpoint",
     visibility = ["//visibility:public"],
     deps = [
-        "//api:go_default_library",
         "//api/client:go_default_library",
         "//api/client/beacon:go_default_library",
+        "//api/httputil:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/state:go_default_library",

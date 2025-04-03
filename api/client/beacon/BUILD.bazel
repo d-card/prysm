@@ -12,9 +12,9 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/api/client/beacon",
     visibility = ["//visibility:public"],
     deps = [
-        "//api:go_default_library",
         "//api/client:go_default_library",
         "//api/client/beacon/iface:go_default_library",
+        "//api/httputil:go_default_library",
         "//api/server:go_default_library",
         "//api/server/structs:go_default_library",
         "//consensus-types/primitives:go_default_library",
@@ -35,8 +35,8 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//api:go_default_library",
         "//api/client/beacon/testing:go_default_library",
+        "//api/httputil:go_default_library",
         "//testing/require:go_default_library",
         "@org_uber_go_mock//gomock:go_default_library",
     ],
