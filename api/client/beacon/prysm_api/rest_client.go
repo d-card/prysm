@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v5/api/apiutil"
 	"github.com/prysmaticlabs/prysm/v5/api/client"
-	"github.com/prysmaticlabs/prysm/v5/api/client/apiutil"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon/node"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"

@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v5/api/client/apiutil"
+	"github.com/prysmaticlabs/prysm/v5/api/apiutil"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
 	enginev1 "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"

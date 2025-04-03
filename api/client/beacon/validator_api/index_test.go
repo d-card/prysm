@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v5/api/client/apiutil"
+	"github.com/prysmaticlabs/prysm/v5/api/apiutil"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon/mock"
 	"github.com/prysmaticlabs/prysm/v5/api/client/beacon/shared_providers"
 	"github.com/prysmaticlabs/prysm/v5/api/server/structs"
