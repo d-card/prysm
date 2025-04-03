@@ -49,7 +49,6 @@ var (
 	errWrongBytesWritten                    = errors.New("wrong number of bytes written")
 	errWrongVersion                         = errors.New("wrong version")
 	errWrongBytesHeaderRead                 = errors.New("wrong number of bytes header read")
-	errWrongFileSize                        = errors.New("wrong file size")
 	errTooManyDataColumns                   = errors.New("too many data columns")
 	errWrongSszEncodedDataColumnSidecarSize = errors.New("wrong SSZ encoded data column sidecar size")
 	errDataColumnSidecarsFromDifferentSlots = errors.New("data column sidecars from different slots")
@@ -80,7 +79,7 @@ type (
 
 	metadata struct {
 		indices                         [mandatoryNumberOfColumns]byte
-		savedDataColumnSidecarCount     uint32
+		savedDataColumnSidecarCount     int64
 		sszEncodedDataColumnSidecarSize uint32
 		fileSize                        int64
 	}
@@ -827,26 +826,21 @@ func (dcs *DataColumnStorage) metadata(file afero.File) (*metadata, error) {
 	var indices [mandatoryNumberOfColumns]byte
 	copy(indices[:], header[indicesOffset:indicesOffset+mandatoryNumberOfColumns])
 
-	// Retrieve the statistics of the file.
-	fileStat, err := file.Stat()
-	if err != nil {
-		return nil, errors.Wrap(err, "file stat")
+	// Compute the saved columns count.
+	savedDataColumnSidecarCount := int64(0)
+	for _, index := range indices {
+		if index >= limit {
+			savedDataColumnSidecarCount++
+		}
 	}
 
-	// Get the size of the file.
-	fileSize := fileStat.Size()
-
-	// Check the file size is correct.
-	if uint32(fileSize-headerSize)%sszEncodedDataColumnSidecarSize != 0 {
-		return nil, errWrongFileSize
-	}
-
-	// Compute how many data columns are saved.
-	savedDataColumnsCount := uint32(fileSize-headerSize) / sszEncodedDataColumnSidecarSize
+	// Compute the size of the file.
+	// It is safe to cast the SSZ encoded data column sidecar size to int64 since it is less than 2**63.
+	fileSize := int64(headerSize) + savedDataColumnSidecarCount*int64(sszEncodedDataColumnSidecarSize) // lint:ignore uintcast
 
 	metadata := &metadata{
 		indices:                         indices,
-		savedDataColumnSidecarCount:     savedDataColumnsCount,
+		savedDataColumnSidecarCount:     savedDataColumnSidecarCount,
 		sszEncodedDataColumnSidecarSize: sszEncodedDataColumnSidecarSize,
 		fileSize:                        fileSize,
 	}

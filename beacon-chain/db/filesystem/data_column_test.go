@@ -505,36 +505,6 @@ func TestMetadata(t *testing.T) {
 		err = file.Close()
 		require.NoError(t, err)
 	})
-
-	t.Run("wrong file size", func(t *testing.T) {
-		_, verifiedRoDataColumnSidecars := verification.CreateTestVerifiedRoDataColumnSidecars(
-			t,
-			verification.DataColumnsParamsByRoot{
-				{1}: {{ColumnIndex: 12, DataColumn: []byte{1, 2, 3}}},
-			},
-		)
-
-		// Save data columns into a file.
-		_, dataColumnStorage := NewEphemeralDataColumnStorageAndFs(t)
-		err := dataColumnStorage.Save(verifiedRoDataColumnSidecars)
-		require.NoError(t, err)
-
-		// Append an extra byte to the file.
-		const filePath = "0/0/0x0100000000000000000000000000000000000000000000000000000000000000.sszs"
-		file, err := dataColumnStorage.fs.OpenFile(filePath, os.O_APPEND, os.FileMode(0600))
-		require.NoError(t, err)
-
-		count, err := file.Write([]byte{42})
-		require.NoError(t, err)
-		require.Equal(t, 1, count)
-
-		// Try to read the metadata.
-		_, err = dataColumnStorage.metadata(file)
-		require.ErrorIs(t, err, errWrongFileSize)
-
-		err = file.Close()
-		require.NoError(t, err)
-	})
 }
 
 func TestPrune(t *testing.T) {
