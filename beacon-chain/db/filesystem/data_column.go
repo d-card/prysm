@@ -40,18 +40,17 @@ const (
 )
 
 var (
-	ErrEncodedDataColumnSidecarTooLarge     = errors.New("encoded data columns sidecar too large")
-	ErrWrongNumberOfColumns                 = errors.New("wrong number of data columns")
-	ErrDataColumnIndexTooLarge              = errors.New("data column index too large")
-	ErrWrongBytesWritten                    = errors.New("wrong number of bytes written")
-	ErrWrongBytesVersionRead                = errors.New("wrong number of bytes version read")
-	ErrWrongVersion                         = errors.New("wrong version")
-	ErrWrongBytesDataColumnSidecarSizeRead  = errors.New("wrong number of bytes data column sidecar size read")
-	ErrWrongBytesIndicesRead                = errors.New("wrong number of bytes indices read")
-	ErrWrongFileSize                        = errors.New("wrong file size")
-	ErrTooManyDataColumns                   = errors.New("too many data columns")
-	ErrWrongSszEncodedDataColumnSidecarSize = errors.New("wrong SSZ encoded data column sidecar size")
-	ErrDataColumnSidecarsFromDifferentSlots = errors.New("data column sidecars from different slots")
+	errWrongNumberOfColumns                 = errors.New("wrong number of data columns")
+	errDataColumnIndexTooLarge              = errors.New("data column index too large")
+	errWrongBytesWritten                    = errors.New("wrong number of bytes written")
+	errWrongBytesVersionRead                = errors.New("wrong number of bytes version read")
+	errWrongVersion                         = errors.New("wrong version")
+	errWrongBytesDataColumnSidecarSizeRead  = errors.New("wrong number of bytes data column sidecar size read")
+	errWrongBytesIndicesRead                = errors.New("wrong number of bytes indices read")
+	errWrongFileSize                        = errors.New("wrong file size")
+	errTooManyDataColumns                   = errors.New("too many data columns")
+	errWrongSszEncodedDataColumnSidecarSize = errors.New("wrong SSZ encoded data column sidecar size")
+	errDataColumnSidecarsFromDifferentSlots = errors.New("data column sidecars from different slots")
 )
 
 type (
@@ -268,7 +267,7 @@ func (dcs *DataColumnStorage) Save(dataColumnSidecars []blocks.VerifiedRODataCol
 	// While implementing this, we expect the number of columns won't change.
 	// If it does, we will need to create a new version of the data column sidecar file.
 	if params.BeaconConfig().NumberOfColumns != mandatoryNumberOfColumns {
-		return ErrWrongNumberOfColumns
+		return errWrongNumberOfColumns
 	}
 
 	highestEpoch := primitives.Epoch(0)
@@ -278,7 +277,7 @@ func (dcs *DataColumnStorage) Save(dataColumnSidecars []blocks.VerifiedRODataCol
 	for _, dataColumnSidecar := range dataColumnSidecars {
 		// Check if the data column index is too large.
 		if dataColumnSidecar.ColumnIndex >= mandatoryNumberOfColumns {
-			return ErrDataColumnIndexTooLarge
+			return errDataColumnIndexTooLarge
 		}
 
 		// Group data column sidecars by root.
@@ -291,7 +290,7 @@ func (dcs *DataColumnStorage) Save(dataColumnSidecars []blocks.VerifiedRODataCol
 		firstSlot := dataColumnSidecars[0].SignedBlockHeader.Header.Slot
 		for _, dataColumnSidecar := range dataColumnSidecars[1:] {
 			if dataColumnSidecar.SignedBlockHeader.Header.Slot != firstSlot {
-				return ErrDataColumnSidecarsFromDifferentSlots
+				return errDataColumnSidecarsFromDifferentSlots
 			}
 		}
 
@@ -387,7 +386,7 @@ func (dcs *DataColumnStorage) Get(root [fieldparams.RootLength]byte, indices []u
 	// Preventive check of indices.
 	for _, index := range indices {
 		if index >= mandatoryNumberOfColumns {
-			return nil, ErrDataColumnIndexTooLarge
+			return nil, errDataColumnIndexTooLarge
 		}
 	}
 
@@ -437,7 +436,7 @@ func (dcs *DataColumnStorage) Get(root [fieldparams.RootLength]byte, indices []u
 			return nil, errors.Wrap(err, "read SSZ encoded data column sidecar")
 		}
 		if uint32(count) != metadata.sszEncodedDataColumnSidecarSize {
-			return nil, ErrWrongBytesWritten
+			return nil, errWrongBytesWritten
 		}
 
 		// Unmarshal the SSZ encoded data column sidecar.
@@ -642,7 +641,7 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsExistingFile(filePath string
 			// This is impossible to happen in practice is this function is called
 			// by SaveDataColumnSidecars.
 			if metadata.savedDataColumnSidecarCount >= mandatoryNumberOfColumns {
-				return ErrTooManyDataColumns
+				return errTooManyDataColumns
 			}
 
 			// SSZ encode the data column sidecar.
@@ -656,7 +655,7 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsExistingFile(filePath string
 
 			// Check if the incoming encoded data column sidecar size corresponds to the one read from the file.
 			if incomingSszEncodedDataColumnSidecarSize != metadata.sszEncodedDataColumnSidecarSize {
-				return ErrWrongSszEncodedDataColumnSidecarSize
+				return errWrongSszEncodedDataColumnSidecarSize
 			}
 
 			// Alter indices to mark the data column as saved.
@@ -675,7 +674,7 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsExistingFile(filePath string
 		return errors.Wrap(err, "write indices")
 	}
 	if count != mandatoryNumberOfColumns {
-		return ErrWrongBytesWritten
+		return errWrongBytesWritten
 	}
 
 	// Append the SSZ encoded data column sidecars to the end of the file.
@@ -684,7 +683,7 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsExistingFile(filePath string
 		return errors.Wrap(err, "write SSZ encoded data column sidecars")
 	}
 	if count != len(sszEncodedDataColumnSidecars) {
-		return ErrWrongBytesWritten
+		return errWrongBytesWritten
 	}
 
 	return nil
@@ -734,7 +733,7 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsNewFile(filePath string, inp
 
 			// Check if the size of the SSZ encoded data column sidecar is correct.
 			if sszEncodedDataColumnSidecarRefSize != 0 && len(sszEncodedDataColumnSidecar) != sszEncodedDataColumnSidecarRefSize {
-				return ErrWrongSszEncodedDataColumnSidecarSize
+				return errWrongSszEncodedDataColumnSidecarSize
 			}
 
 			// Set the SSZ encoded data column sidecar reference size.
@@ -787,7 +786,7 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsNewFile(filePath string, inp
 		return errors.Wrap(err, "write")
 	}
 	if countWritten != countToWrite {
-		return ErrWrongBytesWritten
+		return errWrongBytesWritten
 	}
 
 	return nil
@@ -810,7 +809,7 @@ func (dcs *DataColumnStorage) metadata(file afero.File) (*metadata, error) {
 	}
 
 	if countRead != versionSize {
-		return nil, ErrWrongBytesVersionRead
+		return nil, errWrongBytesVersionRead
 	}
 
 	// Convert the version to an int.
@@ -818,7 +817,7 @@ func (dcs *DataColumnStorage) metadata(file afero.File) (*metadata, error) {
 
 	// Check if the version is the expected one.
 	if fileVersion != version {
-		return nil, ErrWrongVersion
+		return nil, errWrongVersion
 	}
 
 	// DataColumnSidecar is a variable sized ssz object, but all data columns for a block will be the same size.
@@ -829,7 +828,7 @@ func (dcs *DataColumnStorage) metadata(file afero.File) (*metadata, error) {
 		return nil, errors.Wrap(err, "read SSZ encoded data column sidecar size")
 	}
 	if countRead != encodedSszEncodedDataColumnSidecarSizeSize {
-		return nil, ErrWrongBytesDataColumnSidecarSizeRead
+		return nil, errWrongBytesDataColumnSidecarSizeRead
 	}
 
 	// Convert the SSZ encoded data column sidecar size to an int.
@@ -842,7 +841,7 @@ func (dcs *DataColumnStorage) metadata(file afero.File) (*metadata, error) {
 		return nil, errors.Wrap(err, "read data column indices")
 	}
 	if countRead != mandatoryNumberOfColumns {
-		return nil, ErrWrongBytesIndicesRead
+		return nil, errWrongBytesIndicesRead
 	}
 
 	// Retrieve the statistics of the file.
@@ -856,7 +855,7 @@ func (dcs *DataColumnStorage) metadata(file afero.File) (*metadata, error) {
 
 	// Check the file size is correct.
 	if uint32(fileSize-headerSize)%sszEncodedDataColumnSidecarSize != 0 {
-		return nil, ErrWrongFileSize
+		return nil, errWrongFileSize
 	}
 
 	// Compute how many data columns are saved.

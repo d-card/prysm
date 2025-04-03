@@ -120,7 +120,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 
 		_, dataColumnStorage := NewEphemeralDataColumnStorageAndFs(t)
 		err := dataColumnStorage.Save(verifiedRoDataColumnSidecars)
-		require.ErrorIs(t, err, ErrWrongNumberOfColumns)
+		require.ErrorIs(t, err, errWrongNumberOfColumns)
 	})
 
 	t.Run("one of the column index is too large", func(t *testing.T) {
@@ -131,7 +131,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 
 		_, dataColumnStorage := NewEphemeralDataColumnStorageAndFs(t)
 		err := dataColumnStorage.Save(verifiedRoDataColumnSidecars)
-		require.ErrorIs(t, err, ErrDataColumnIndexTooLarge)
+		require.ErrorIs(t, err, errDataColumnIndexTooLarge)
 	})
 
 	t.Run("different slots", func(t *testing.T) {
@@ -147,7 +147,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 
 		_, dataColumnStorage := NewEphemeralDataColumnStorageAndFs(t)
 		err := dataColumnStorage.Save(verifiedRoDataColumnSidecars)
-		require.ErrorIs(t, err, ErrDataColumnSidecarsFromDifferentSlots)
+		require.ErrorIs(t, err, errDataColumnSidecarsFromDifferentSlots)
 	})
 
 	t.Run("new file - no data columns to save", func(t *testing.T) {
@@ -174,7 +174,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 
 		_, dataColumnStorage := NewEphemeralDataColumnStorageAndFs(t)
 		err := dataColumnStorage.Save(verifiedRoDataColumnSidecars)
-		require.ErrorIs(t, err, ErrWrongSszEncodedDataColumnSidecarSize)
+		require.ErrorIs(t, err, errWrongSszEncodedDataColumnSidecarSize)
 	})
 
 	t.Run("existing file - wrong incoming SSZ encoded size", func(t *testing.T) {
@@ -197,7 +197,7 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 
 		// Try to rewrite the file.
 		err = dataColumnStorage.Save(verifiedRoDataColumnSidecars)
-		require.ErrorIs(t, err, ErrWrongSszEncodedDataColumnSidecarSize)
+		require.ErrorIs(t, err, errWrongSszEncodedDataColumnSidecarSize)
 	})
 
 	t.Run("nominal", func(t *testing.T) {
@@ -355,7 +355,7 @@ func TestGetDataColumnSidecars(t *testing.T) {
 	t.Run("index too large", func(t *testing.T) {
 		_, dataColumnStorage := NewEphemeralDataColumnStorageAndFs(t)
 		_, err := dataColumnStorage.Get([fieldparams.RootLength]byte{1}, []uint64{1_000_000})
-		require.ErrorIs(t, err, ErrDataColumnIndexTooLarge)
+		require.ErrorIs(t, err, errDataColumnIndexTooLarge)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -500,7 +500,7 @@ func TestMetadata(t *testing.T) {
 
 		// Try to read the metadata.
 		_, err = dataColumnStorage.metadata(file)
-		require.ErrorIs(t, err, ErrWrongVersion)
+		require.ErrorIs(t, err, errWrongVersion)
 
 		err = file.Close()
 		require.NoError(t, err)
@@ -530,7 +530,7 @@ func TestMetadata(t *testing.T) {
 
 		// Try to read the metadata.
 		_, err = dataColumnStorage.metadata(file)
-		require.ErrorIs(t, err, ErrWrongFileSize)
+		require.ErrorIs(t, err, errWrongFileSize)
 
 		err = file.Close()
 		require.NoError(t, err)
