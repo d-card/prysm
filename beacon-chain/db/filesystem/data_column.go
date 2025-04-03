@@ -31,7 +31,7 @@ const (
 	version                                    int = 0x01
 	versionSize                                    = 1           //bytes
 	maxSszEncodedDataColumnSidecarSize             = 536_870_912 // 2**(4*8) / 8 bytes
-	encodedSszEncodedDataColumnSidecarSizeSize     = 4           // bytes (size of the endoded size of the SSZ encoded data column sidecar)
+	encodedSszEncodedDataColumnSidecarSizeSize     = 4           // bytes (size of the encoded size of the SSZ encoded data column sidecar)
 	mandatoryNumberOfColumns                       = 128         // 2**7
 	limit                                          = mandatoryNumberOfColumns
 	headerSize                                     = versionSize + encodedSszEncodedDataColumnSidecarSizeSize + mandatoryNumberOfColumns
