@@ -70,6 +70,7 @@ type BeaconState struct {
 	pendingDeposits               []*ethpb.PendingDeposit           // pending_deposits: List[PendingDeposit, PENDING_DEPOSITS_LIMIT]
 	pendingPartialWithdrawals     []*ethpb.PendingPartialWithdrawal // pending_partial_withdrawals: List[PartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
 	pendingConsolidations         []*ethpb.PendingConsolidation     // pending_consolidations: List[PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT]
+	proposerLookAhead             []uint64                          // proposer_look_ahead: List[uint64, (MIN_LOOKAHEAD + 1)*SLOTS_PER_EPOCH]
 
 	id                    uint64
 	lock                  sync.RWMutex

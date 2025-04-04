@@ -41,6 +41,7 @@ mainnet = {
     "bytes_per_cell.size": "2048",  # FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT
     "cells_per_blob.size": "128",
     "kzg_commitments_inclusion_proof_depth.size": "4",
+    "proposer_lookahead_limit": "64", # (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH
 }
 
 minimal = {
@@ -78,6 +79,7 @@ minimal = {
     "bytes_per_cell.size": "2048",  # FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT
     "cells_per_blob.size": "128",
     "kzg_commitments_inclusion_proof_depth.size": "4",
+    "proposer_lookahead_limit": "16", # (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH
 }
 
 ###### Rules definitions #######
