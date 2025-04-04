@@ -77,8 +77,12 @@ type (
 		Indices []uint64
 	}
 
+	storageIndices struct {
+		indices [mandatoryNumberOfColumns]byte
+	}
+
 	metadata struct {
-		indices                         [mandatoryNumberOfColumns]byte
+		indices                         *storageIndices
 		savedDataColumnSidecarCount     int64
 		sszEncodedDataColumnSidecarSize uint32
 		fileSize                        int64
@@ -214,16 +218,7 @@ func (dcs *DataColumnStorage) WarmCache() {
 		}
 
 		// Check the indices.
-		indices := make([]uint64, 0, len(metadata.indices))
-		for index, i := range metadata.indices {
-			// Skip if the data column is not saved.
-			if i < nonZeroOffset {
-				continue
-			}
-
-			indices = append(indices, uint64(index))
-		}
-
+		indices := metadata.indices.all()
 		if len(indices) == 0 {
 			return nil
 		}
@@ -386,13 +381,6 @@ func (dcs *DataColumnStorage) Get(root [fieldparams.RootLength]byte, indices []u
 		}
 	}
 
-	// Preventive check of indices.
-	for _, index := range indices {
-		if index >= mandatoryNumberOfColumns {
-			return nil, errDataColumnIndexTooLarge
-		}
-	}
-
 	summary, ok := dcs.cache.get(root)
 	if !ok {
 		// Nothing found in db. Exit early.
@@ -418,15 +406,21 @@ func (dcs *DataColumnStorage) Get(root [fieldparams.RootLength]byte, indices []u
 	// Retrieve data column sidecars from the file.
 	verifiedRODataColumnSidecars := make([]blocks.VerifiedRODataColumn, 0, len(indices))
 	for _, index := range indices {
+		ok, position, err := metadata.indices.get(index)
+		if err != nil {
+			return nil, errors.Wrap(err, "get index")
+		}
+
 		// Skip if the data column is not saved.
-		if metadata.indices[index] < nonZeroOffset {
+		if !ok {
 			continue
 		}
 
 		// Compute the offset of the data column sidecar.
-		offset := headerSize + int64(metadata.indices[index]-nonZeroOffset)*int64(metadata.sszEncodedDataColumnSidecarSize)
+		offset := headerSize + int64(position)*int64(metadata.sszEncodedDataColumnSidecarSize)
+
 		// Seek to the beginning of the data column sidecar.
-		_, err := file.Seek(offset, io.SeekStart)
+		_, err = file.Seek(offset, io.SeekStart)
 		if err != nil {
 			return nil, errors.Wrap(err, "seek")
 		}
@@ -613,8 +607,13 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsExistingFile(filePath string
 			// Extract the data columns index.
 			dataColumnIndex := dataColumnSidecar.ColumnIndex
 
+			ok, _, err := metadata.indices.get(dataColumnIndex)
+			if err != nil {
+				return errors.Wrap(err, "get index")
+			}
+
 			// Skip if the data column is already saved.
-			if metadata.indices[dataColumnIndex] >= nonZeroOffset {
+			if ok {
 				continue
 			}
 
@@ -640,8 +639,10 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsExistingFile(filePath string
 			}
 
 			// Alter indices to mark the data column as saved.
-			// savedDataColumnsCount can safely be cast to uint8 since we have checked it is less than mandatoryNumberOfColumns.
-			metadata.indices[dataColumnIndex] = nonZeroOffset + uint8(metadata.savedDataColumnSidecarCount)
+			if err := metadata.indices.set(dataColumnIndex, uint8(metadata.savedDataColumnSidecarCount)); err != nil {
+				return errors.Wrap(err, "set index")
+			}
+
 			metadata.savedDataColumnSidecarCount++
 
 			// Append the SSZ encoded data column sidecar to the SSZ encoded data column sidecars.
@@ -650,7 +651,8 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsExistingFile(filePath string
 	}
 
 	// Save indices to the file.
-	count, err := file.WriteAt(metadata.indices[:], int64(versionSize+encodedSszEncodedDataColumnSidecarSizeSize))
+	indices := metadata.indices.raw()
+	count, err := file.WriteAt(indices[:], int64(versionSize+encodedSszEncodedDataColumnSidecarSizeSize))
 	if err != nil {
 		return errors.Wrap(err, "write indices")
 	}
@@ -674,7 +676,7 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsExistingFile(filePath string
 // This function expects all data column sidecars to belong to the same block.
 func (dcs *DataColumnStorage) saveDataColumnSidecarsNewFile(filePath string, inputDataColumnSidecars chan []blocks.VerifiedRODataColumn) (err error) {
 	// Initialize the indices.
-	var indices [mandatoryNumberOfColumns]byte
+	var indices storageIndices
 
 	var (
 		sszEncodedDataColumnSidecarRefSize int
@@ -682,7 +684,7 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsNewFile(filePath string, inp
 	)
 
 	// Initialize the count of the saved SSZ encoded data column sidecar.
-	storedCount := 0
+	storedCount := uint8(0)
 
 	for {
 		dataColumnSidecars := pullChan(inputDataColumnSidecars)
@@ -695,13 +697,19 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsNewFile(filePath string, inp
 			dataColumnIndex := dataColumnSidecar.ColumnIndex
 
 			// Skip if the data column is already stored.
-			if indices[dataColumnIndex] >= nonZeroOffset {
+			ok, _, err := indices.get(dataColumnIndex)
+			if err != nil {
+				return errors.Wrap(err, "get index")
+			}
+			if ok {
 				continue
 			}
 
 			// Alter the indices to mark the first data column sidecar as saved.
 			// savedCount can safely be cast to uint8 since it is less than limit.
-			indices[dataColumnIndex] = nonZeroOffset + uint8(storedCount)
+			if err := indices.set(dataColumnIndex, storedCount); err != nil {
+				return errors.Wrap(err, "set index")
+			}
 
 			// Increment the count of the saved SSZ encoded data column sidecar.
 			storedCount++
@@ -754,12 +762,15 @@ func (dcs *DataColumnStorage) saveDataColumnSidecarsNewFile(filePath string, inp
 	var encodedSszEncodedDataColumnSidecarSize [encodedSszEncodedDataColumnSidecarSizeSize]byte
 	binary.BigEndian.PutUint32(encodedSszEncodedDataColumnSidecarSize[:], uint32(sszEncodedDataColumnSidecarRefSize))
 
+	// Get the raw indices.
+	rawIndices := indices.raw()
+
 	// Concatenate the version, the data column sidecar size, the data column indices and the SSZ encoded data column sidecar.
 	countToWrite := headerSize + len(sszEncodedDataColumnSidecars)
 	bytes := make([]byte, 0, countToWrite)
 	bytes = append(bytes, byte(version))
 	bytes = append(bytes, encodedSszEncodedDataColumnSidecarSize[:]...)
-	bytes = append(bytes, indices[:]...)
+	bytes = append(bytes, rawIndices[:]...)
 	bytes = append(bytes, sszEncodedDataColumnSidecars...)
 
 	countWritten, err := file.Write(bytes)
@@ -803,16 +814,13 @@ func (dcs *DataColumnStorage) metadata(file afero.File) (*metadata, error) {
 	sszEncodedDataColumnSidecarSize := binary.BigEndian.Uint32(encodedSszEncodedDataColumnSidecarSize)
 
 	// Read the data column indices.
-	var indices [mandatoryNumberOfColumns]byte
-	copy(indices[:], header[indicesOffset:indicesOffset+mandatoryNumberOfColumns])
+	indices, err := newStorageIndices(header[indicesOffset : indicesOffset+mandatoryNumberOfColumns])
+	if err != nil {
+		return nil, errors.Wrap(err, "new storage indices")
+	}
 
 	// Compute the saved columns count.
-	savedDataColumnSidecarCount := int64(0)
-	for _, index := range indices {
-		if index >= nonZeroOffset {
-			savedDataColumnSidecarCount++
-		}
-	}
+	savedDataColumnSidecarCount := int64(indices.len())
 
 	// Compute the size of the file.
 	// It is safe to cast the SSZ encoded data column sidecar size to int64 since it is less than 2**63.
@@ -844,6 +852,76 @@ func (dcs *DataColumnStorage) fileMutex(root [fieldparams.RootLength]byte) (*syn
 	}
 
 	return mc.mu, mc.toStore
+}
+
+func newStorageIndices(indices []byte) (*storageIndices, error) {
+	if len(indices) != mandatoryNumberOfColumns {
+		return nil, errWrongNumberOfColumns
+	}
+
+	var storageIndices storageIndices
+	copy(storageIndices.indices[:], indices)
+
+	return &storageIndices, nil
+}
+
+// get returns a boolean indicating if the data column sidecar is saved,
+// and the position of the data column sidecar in the file.
+func (si *storageIndices) get(dataColumnIndex uint64) (bool, int64, error) {
+	if dataColumnIndex >= mandatoryNumberOfColumns {
+		return false, 0, errDataColumnIndexTooLarge
+	}
+
+	if si.indices[dataColumnIndex] < nonZeroOffset {
+		return false, 0, nil
+	}
+
+	return true, int64(si.indices[dataColumnIndex] - nonZeroOffset), nil
+}
+
+// len returns the number of saved data column sidecars.
+func (si *storageIndices) len() int {
+	count := 0
+
+	for _, i := range si.indices {
+		if i >= nonZeroOffset {
+			count++
+		}
+	}
+
+	return count
+}
+
+// all returns all saved data column sidecars.
+func (si *storageIndices) all() []uint64 {
+	indices := make([]uint64, 0, len(si.indices))
+
+	for index, i := range si.indices {
+		if i >= nonZeroOffset {
+			indices = append(indices, uint64(index))
+		}
+	}
+
+	return indices
+}
+
+// raw returns the raw data column sidecar indices.
+// It can be safely modified by the caller.
+func (si *storageIndices) raw() [mandatoryNumberOfColumns]byte {
+	var result [mandatoryNumberOfColumns]byte
+	copy(result[:], si.indices[:])
+	return result
+}
+
+// set sets the data column sidecar as saved.
+func (si *storageIndices) set(dataColumnIndex uint64, position uint8) error {
+	if dataColumnIndex >= mandatoryNumberOfColumns || position >= mandatoryNumberOfColumns {
+		return errDataColumnIndexTooLarge
+	}
+
+	si.indices[dataColumnIndex] = nonZeroOffset + position
+
+	return nil
 }
 
 // pullChan pulls data column sidecars from the input channel until it is empty.

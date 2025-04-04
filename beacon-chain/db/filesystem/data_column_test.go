@@ -352,12 +352,6 @@ func TestSaveDataColumnsSidecars(t *testing.T) {
 }
 
 func TestGetDataColumnSidecars(t *testing.T) {
-	t.Run("index too large", func(t *testing.T) {
-		_, dataColumnStorage := NewEphemeralDataColumnStorageAndFs(t)
-		_, err := dataColumnStorage.Get([fieldparams.RootLength]byte{1}, []uint64{1_000_000})
-		require.ErrorIs(t, err, errDataColumnIndexTooLarge)
-	})
-
 	t.Run("not found", func(t *testing.T) {
 		_, dataColumnStorage := NewEphemeralDataColumnStorageAndFs(t)
 
@@ -504,6 +498,92 @@ func TestMetadata(t *testing.T) {
 
 		err = file.Close()
 		require.NoError(t, err)
+	})
+}
+
+func TestNewStorageIndices(t *testing.T) {
+	t.Run("wrong number of columns", func(t *testing.T) {
+		_, err := newStorageIndices(nil)
+		require.ErrorIs(t, err, errWrongNumberOfColumns)
+	})
+
+	t.Run("nominal", func(t *testing.T) {
+		var indices [mandatoryNumberOfColumns]byte
+		indices[0] = 1
+
+		storageIndices, err := newStorageIndices(indices[:])
+		require.NoError(t, err)
+		require.Equal(t, indices, storageIndices.indices)
+	})
+}
+
+func TestStorageIndicesGet(t *testing.T) {
+	t.Run("index too large", func(t *testing.T) {
+		var indices storageIndices
+		_, _, err := indices.get(1_000_000)
+		require.ErrorIs(t, errDataColumnIndexTooLarge, err)
+	})
+
+	t.Run("index not set", func(t *testing.T) {
+		const expected = false
+		var indices storageIndices
+		actual, _, err := indices.get(0)
+		require.NoError(t, err)
+		require.Equal(t, expected, actual)
+	})
+
+	t.Run("index set", func(t *testing.T) {
+		const (
+			expectedOk       = true
+			expectedPosition = int64(3)
+		)
+
+		indices := storageIndices{indices: [mandatoryNumberOfColumns]byte{0, 131}}
+		actualOk, actualPosition, err := indices.get(1)
+		require.NoError(t, err)
+		require.Equal(t, expectedOk, actualOk)
+		require.Equal(t, expectedPosition, actualPosition)
+	})
+}
+
+func TestStorageIndicesLen(t *testing.T) {
+	const expectedLen = 2
+	indices := storageIndices{indices: [mandatoryNumberOfColumns]byte{0, 131, 0, 128}}
+	actualLen := indices.len()
+	require.Equal(t, expectedLen, actualLen)
+}
+
+func TestStorageIndicesAll(t *testing.T) {
+	expectedIndices := []uint64{1, 3}
+	indices := storageIndices{indices: [mandatoryNumberOfColumns]byte{0, 131, 0, 128}}
+	actualIndices := indices.all()
+	require.DeepEqual(t, expectedIndices, actualIndices)
+}
+
+func TestStorageIndicesSet(t *testing.T) {
+	t.Run("data column index too large", func(t *testing.T) {
+		var indices storageIndices
+		err := indices.set(1_000_000, 0)
+		require.ErrorIs(t, errDataColumnIndexTooLarge, err)
+	})
+
+	t.Run("position too large", func(t *testing.T) {
+		var indices storageIndices
+		err := indices.set(0, 255)
+		require.ErrorIs(t, errDataColumnIndexTooLarge, err)
+	})
+
+	t.Run("nominal", func(t *testing.T) {
+		expected := [mandatoryNumberOfColumns]byte{0, 0, 128, 0, 131}
+		var indices storageIndices
+
+		err := indices.set(2, 0)
+		require.NoError(t, err)
+
+		err = indices.set(4, 3)
+		require.NoError(t, err)
+
+		require.Equal(t, expected, indices.indices)
 	})
 }
 
