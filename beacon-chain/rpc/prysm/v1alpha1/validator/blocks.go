@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
+	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -47,7 +48,7 @@ func (vs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethp
 	}
 }
 
-// StreamSlots sends a block's slot to clients every single time a block is received by the beacon node.
+// StreamSlots sends a the block's slot and dependent roots to clients every single time a block is received by the beacon node.
 func (vs *Server) StreamSlots(req *ethpb.StreamSlotsRequest, stream ethpb.BeaconNodeValidator_StreamSlotsServer) error {
 	ch := make(chan *feed.Event, 1)
 	var sub event.Subscription
@@ -81,7 +82,24 @@ func (vs *Server) StreamSlots(req *ethpb.StreamSlotsRequest, stream ethpb.Beacon
 				}
 				s = data.SignedBlock.Block().Slot()
 			}
-			if err := stream.Send(&ethpb.StreamSlotsResponse{Slot: s}); err != nil {
+			currEpoch := slots.ToEpoch(s)
+			currDepRoot, err := vs.ForkchoiceFetcher.DependentRoot(currEpoch)
+			if err != nil {
+				return status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
+			}
+			prevDepRoot := currDepRoot
+			if currEpoch > 0 {
+				prevDepRoot, err = vs.ForkchoiceFetcher.DependentRoot(currEpoch - 1)
+				if err != nil {
+					return status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
+				}
+			}
+			if err := stream.Send(
+				&ethpb.StreamSlotsResponse{
+					Slot:                      s,
+					PreviousDutyDependentRoot: prevDepRoot[:],
+					CurrentDutyDependentRoot:  currDepRoot[:],
+				}); err != nil {
 				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
 			}
 		case <-sub.Err():
