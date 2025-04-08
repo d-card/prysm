@@ -60,52 +60,6 @@ func jsonifySingleAttestations(attestations []*ethpb.SingleAttestation) []*struc
 	return jsonAttestations
 }
 
-func jsonifyAttesterSlashings(attesterSlashings []*ethpb.AttesterSlashing) []*structs.AttesterSlashing {
-	jsonAttesterSlashings := make([]*structs.AttesterSlashing, len(attesterSlashings))
-	for index, attesterSlashing := range attesterSlashings {
-		jsonAttesterSlashing := &structs.AttesterSlashing{
-			Attestation1: jsonifyIndexedAttestation(attesterSlashing.Attestation_1),
-			Attestation2: jsonifyIndexedAttestation(attesterSlashing.Attestation_2),
-		}
-		jsonAttesterSlashings[index] = jsonAttesterSlashing
-	}
-	return jsonAttesterSlashings
-}
-
-func jsonifyDeposits(deposits []*ethpb.Deposit) []*structs.Deposit {
-	jsonDeposits := make([]*structs.Deposit, len(deposits))
-	for depositIndex, deposit := range deposits {
-		proofs := make([]string, len(deposit.Proof))
-		for proofIndex, proof := range deposit.Proof {
-			proofs[proofIndex] = hexutil.Encode(proof)
-		}
-
-		jsonDeposit := &structs.Deposit{
-			Data: &structs.DepositData{
-				Amount:                apiutil.Uint64ToString(deposit.Data.Amount),
-				Pubkey:                hexutil.Encode(deposit.Data.PublicKey),
-				Signature:             hexutil.Encode(deposit.Data.Signature),
-				WithdrawalCredentials: hexutil.Encode(deposit.Data.WithdrawalCredentials),
-			},
-			Proof: proofs,
-		}
-		jsonDeposits[depositIndex] = jsonDeposit
-	}
-	return jsonDeposits
-}
-
-func jsonifyProposerSlashings(proposerSlashings []*ethpb.ProposerSlashing) []*structs.ProposerSlashing {
-	jsonProposerSlashings := make([]*structs.ProposerSlashing, len(proposerSlashings))
-	for index, proposerSlashing := range proposerSlashings {
-		jsonProposerSlashing := &structs.ProposerSlashing{
-			SignedHeader1: jsonifySignedBeaconBlockHeader(proposerSlashing.Header_1),
-			SignedHeader2: jsonifySignedBeaconBlockHeader(proposerSlashing.Header_2),
-		}
-		jsonProposerSlashings[index] = jsonProposerSlashing
-	}
-	return jsonProposerSlashings
-}
-
 // JsonifySignedVoluntaryExits converts an array of voluntary exit structs to a JSON hex string compatible format.
 func JsonifySignedVoluntaryExits(voluntaryExits []*ethpb.SignedVoluntaryExit) []*structs.SignedVoluntaryExit {
 	jsonSignedVoluntaryExits := make([]*structs.SignedVoluntaryExit, len(voluntaryExits))
