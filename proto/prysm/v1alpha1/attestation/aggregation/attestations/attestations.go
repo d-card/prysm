@@ -62,10 +62,6 @@ func AggregateDisjointOneBitAtts(atts []ethpb.Att, beh *bitlist_error.BitlistErr
 			if err != nil {
 				return nil, err
 			}
-			logrus.Debugf("Coverage length before ToBitlist64() is %d", atts[0].GetAggregationBits().Len())
-			logrus.Debugf("Coverage length after ToBitlist64() is %d", coverage.Len())
-			logrus.Debugf("Attestation length before ToBitlist64() is %d", att.GetAggregationBits().Len())
-			logrus.Debugf("Attestation length after ToBitlist64() is %d", bits.Len())
 			beh.Handle(id, att, coverage.ToBitlist())
 			return nil, errors.Wrap(err, "could not get aggregation bits")
 		}
