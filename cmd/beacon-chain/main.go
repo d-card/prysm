@@ -326,6 +326,8 @@ func startNode(ctx *cli.Context, cancel context.CancelFunc) error {
 		}
 	}
 
+	log.Infof("os.TempDir() is %s", os.TempDir())
+
 	beacon, err := node.New(ctx, cancel, opts...)
 	if err != nil {
 		return fmt.Errorf("unable to start beacon node: %w", err)
