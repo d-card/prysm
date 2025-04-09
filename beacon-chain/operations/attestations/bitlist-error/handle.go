@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
@@ -39,8 +40,8 @@ func (h *BitlistErrorHandler) Handle(id attestation.Id, att ethpb.Att, seenBitli
 	h.BitlistErrCount[id] = count + 1
 	h.BitlistErrCountLock.Unlock()
 
-	attFilename := path.Join(os.TempDir(), id.String(), "-att-", strconv.FormatUint(count, 10), ".json")
-	dumpFilename := path.Join(os.TempDir(), id.String(), "-dump-", strconv.FormatUint(count, 10), ".json")
+	attFilename := path.Join(os.TempDir(), hexutil.Encode([]byte(id.String())), "-atts-", strconv.FormatUint(count, 10), ".json")
+	dumpFilename := path.Join(os.TempDir(), hexutil.Encode([]byte(id.String())), "-dump-", strconv.FormatUint(count, 10), ".json")
 	log.Debugf(
 		"Found attestations with different bitlist lengths (%d and %d). Saving attestation JSON to %s and fork choice dump JSON to %s",
 		len(att.GetAggregationBits()),
