@@ -1,6 +1,7 @@
 package attestations
 
 import (
+	"github.com/google/martian/log"
 	"github.com/pkg/errors"
 	bitlist_error "github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/bitlist-error"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
@@ -62,6 +63,10 @@ func AggregateDisjointOneBitAtts(atts []ethpb.Att, beh *bitlist_error.BitlistErr
 			if err != nil {
 				return nil, err
 			}
+			log.Debugf("Coverage length before ToBitlist64() is %d", atts[0].GetAggregationBits().Len())
+			log.Debugf("Coverage length after ToBitlist64() is %d", coverage.Len())
+			log.Debugf("Attestation length before ToBitlist64() is %d", att.GetAggregationBits().Len())
+			log.Debugf("Attestation length after ToBitlist64() is %d", bits.Len())
 			beh.Handle(id, att, coverage.ToBitlist())
 			return nil, errors.Wrap(err, "could not get aggregation bits")
 		}
