@@ -76,7 +76,7 @@ func (c *AttCaches) aggregateParallel(atts map[attestation.Id][]ethpb.Att, leftO
 		go func() {
 			defer wg.Done()
 			for as := range ch {
-				aggregated, err := attaggregation.AggregateDisjointOneBitAtts(as)
+				aggregated, err := attaggregation.AggregateDisjointOneBitAtts(as, c.beh)
 				if err != nil {
 					log.WithError(err).Error("could not aggregate unaggregated attestations")
 					continue
@@ -275,7 +275,7 @@ func (c *AttCaches) DeleteAggregatedAttestation(att ethpb.Att) error {
 	filtered := make([]ethpb.Att, 0)
 	for _, a := range attList {
 		if contains, err := att.GetAggregationBits().Contains(a.GetAggregationBits()); err != nil {
-			c.handleBitlistError(id, att, a.GetAggregationBits())
+			c.beh.Handle(id, att, a.GetAggregationBits())
 			return err
 		} else if !contains {
 			filtered = append(filtered, a)
@@ -306,7 +306,7 @@ func (c *AttCaches) HasAggregatedAttestation(att ethpb.Att) (bool, error) {
 	if atts, ok := c.aggregatedAtt[id]; ok {
 		for _, a := range atts {
 			if contains, err := a.GetAggregationBits().Contains(att.GetAggregationBits()); err != nil {
-				c.handleBitlistError(id, att, a.GetAggregationBits())
+				c.beh.Handle(id, att, a.GetAggregationBits())
 				return false, err
 			} else if contains {
 				return true, nil
@@ -319,7 +319,7 @@ func (c *AttCaches) HasAggregatedAttestation(att ethpb.Att) (bool, error) {
 	if atts, ok := c.blockAtt[id]; ok {
 		for _, a := range atts {
 			if contains, err := a.GetAggregationBits().Contains(att.GetAggregationBits()); err != nil {
-				c.handleBitlistError(id, att, a.GetAggregationBits())
+				c.beh.Handle(id, att, a.GetAggregationBits())
 				return false, err
 			} else if contains {
 				return true, nil

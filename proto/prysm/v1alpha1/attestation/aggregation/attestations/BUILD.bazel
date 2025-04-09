@@ -9,8 +9,10 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/operations/attestations/bitlist-error:go_default_library",
         "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/attestation:go_default_library",
         "//proto/prysm/v1alpha1/attestation/aggregation:go_default_library",
         "//runtime/version:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

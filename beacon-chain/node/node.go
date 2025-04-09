@@ -37,6 +37,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/monitor"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	bitlist_error "github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/bitlist-error"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/blstoexec"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/synccommittee"
@@ -63,6 +64,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/container/slice"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/prometheus"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v5/runtime"
 	"github.com/prysmaticlabs/prysm/v5/runtime/prereqs"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
@@ -138,6 +140,11 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	ctx := cliCtx.Context
 
 	fc := doublylinkedtree.New()
+	beh := &bitlist_error.BitlistErrorHandler{
+		Fc:              fc,
+		FcDumpLimit:     100,
+		BitlistErrCount: make(map[attestation.Id]uint64),
+	}
 
 	beacon := &BeaconNode{
 		cliCtx:                  cliCtx,
@@ -149,7 +156,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		blockFeed:               new(event.Feed),
 		opFeed:                  new(event.Feed),
 		attestationCache:        cache.NewAttestationCache(),
-		attestationPool:         attestations.NewPool(fc),
+		attestationPool:         attestations.NewPool(beh),
 		exitPool:                voluntaryexits.NewPool(),
 		slashingsPool:           slashings.NewPool(),
 		syncCommitteePool:       synccommittee.NewPool(),

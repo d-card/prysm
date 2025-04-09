@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations"
+	bitlist_error "github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/bitlist-error"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/stategen"
@@ -29,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/v5/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
@@ -53,8 +55,13 @@ func startChainService(t testing.TB,
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 	fc := doublylinkedtree.New()
+	beh := &bitlist_error.BitlistErrorHandler{
+		Fc:              fc,
+		FcDumpLimit:     100,
+		BitlistErrCount: make(map[attestation.Id]uint64),
+	}
 	attPool, err := attestations.NewService(ctx, &attestations.Config{
-		Pool: attestations.NewPool(fc),
+		Pool: attestations.NewPool(beh),
 	})
 	require.NoError(t, err)
 
@@ -70,7 +77,7 @@ func startChainService(t testing.TB,
 		blockchain.WithForkChoiceStore(fc),
 		blockchain.WithStateGen(sg),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
-		blockchain.WithAttestationPool(attestations.NewPool(fc)),
+		blockchain.WithAttestationPool(attestations.NewPool(beh)),
 		blockchain.WithDepositCache(depositCache),
 		blockchain.WithTrackedValidatorsCache(cache.NewTrackedValidatorsCache()),
 		blockchain.WithPayloadIDCache(cache.NewPayloadIDCache()),

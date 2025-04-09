@@ -2,8 +2,10 @@ package attestations
 
 import (
 	"github.com/pkg/errors"
+	bitlist_error "github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/bitlist-error"
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
 	"github.com/sirupsen/logrus"
 )
@@ -38,7 +40,7 @@ func Aggregate(atts []ethpb.Att) ([]ethpb.Att, error) {
 
 // AggregateDisjointOneBitAtts aggregates unaggregated attestations with the
 // exact same attestation data.
-func AggregateDisjointOneBitAtts(atts []ethpb.Att) (ethpb.Att, error) {
+func AggregateDisjointOneBitAtts(atts []ethpb.Att, beh *bitlist_error.BitlistErrorHandler) (ethpb.Att, error) {
 	if len(atts) == 0 {
 		return nil, nil
 	}
@@ -56,6 +58,11 @@ func AggregateDisjointOneBitAtts(atts []ethpb.Att) (ethpb.Att, error) {
 		}
 		err = coverage.NoAllocOr(bits, coverage)
 		if err != nil {
+			id, err := attestation.NewId(att, attestation.Data)
+			if err != nil {
+				return nil, err
+			}
+			beh.Handle(id, att, coverage.ToBitlist())
 			return nil, errors.Wrap(err, "could not get aggregation bits")
 		}
 	}

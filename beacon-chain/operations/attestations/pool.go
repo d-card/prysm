@@ -3,7 +3,7 @@ package attestations
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v5/beacon-chain/forkchoice"
+	bitlist_error "github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/bitlist-error"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/operations/attestations/kv"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -45,6 +45,6 @@ type Pool interface {
 }
 
 // NewPool initializes a new attestation pool.
-func NewPool(fc forkchoice.ForkChoicer) *kv.AttCaches {
-	return kv.NewAttCaches(fc)
+func NewPool(beh *bitlist_error.BitlistErrorHandler) *kv.AttCaches {
+	return kv.NewAttCaches(beh)
 }
