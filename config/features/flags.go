@@ -54,9 +54,9 @@ var (
 		Usage: `WARNING: gRPC API will still be supported for some time, most likely until v8 in 2026, but will be eventually removed in favor of REST API.
 		Disables displaying logs for newly connected grpc clients.`,
 	}
-	safeHeadFCU = &cli.BoolFlag{
-		Name:  "safe-head-fcu",
-		Usage: "Enables safe head block instead of justified block in FCU updates.",
+	enableFastConfirmation = &cli.BoolFlag{
+		Name:  "enable-fast-confirmation",
+		Usage: "Enables fast confirmation for safe block hash",
 	}
 	disablePeerScorer = &cli.BoolFlag{
 		Name:  "disable-peer-scorer",
@@ -231,7 +231,7 @@ var BeaconChainFlags = combinedFlags([]cli.Flag{
 	SepoliaTestnet,
 	HoodiTestnet,
 	Mainnet,
-	safeHeadFCU,
+	enableFastConfirmation,
 	disablePeerScorer,
 	disableBroadcastSlashingFlag,
 	disableStakinContractCheck,
