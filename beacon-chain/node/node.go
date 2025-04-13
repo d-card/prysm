@@ -271,6 +271,10 @@ func configureBeacon(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not configure execution setting")
 	}
 
+	if err := configureSafeBlockConfig(cliCtx); err != nil {
+		return errors.Wrap(err, "could not configure safe block config")
+	}
+
 	return nil
 }
 

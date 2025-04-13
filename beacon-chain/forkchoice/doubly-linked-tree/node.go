@@ -270,13 +270,12 @@ func (n *Node) confirmed(slot primitives.Slot, committeeWeight uint64, pbRoot [3
 
 	pbWeight := committeeWeight * params.BeaconConfig().ProposerScoreBoost / 100
 	maxWeight := n.maxWeight(slot, committeeWeight)
-	threshold := (maxWeight + pbWeight) / 2
+	byzantineWeight := maxWeight * params.BeaconConfig().FastConfirmationByzantineThreshold / 100
+	threshold := (maxWeight+pbWeight)/2 + byzantineWeight
 
 	nodeWeight := n.weight
-	if n.root == pbRoot {
-		nodeWeight -= pbValue
-	}
-	if n.bestDescendant != nil && n.bestDescendant.root == pbRoot {
+
+	if n.root == pbRoot || (n.bestDescendant != nil && n.bestDescendant.root == pbRoot) {
 		if nodeWeight < pbValue {
 			return false
 		}

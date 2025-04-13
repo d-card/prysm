@@ -8,7 +8,6 @@ import (
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/OffchainLabs/prysm/v6/beacon-chain/forkchoice/types"
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
-	"github.com/OffchainLabs/prysm/v6/config/features"
 	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
 	"github.com/OffchainLabs/prysm/v6/config/params"
 	consensus_blocks "github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
@@ -93,8 +92,10 @@ func (f *ForkChoice) Head(
 		return [32]byte{}, errors.Wrap(err, "could not get head")
 	}
 
-	if err := f.updateSafeHead(ctx); err != nil {
-		log.WithError(err).Error("could not update safe head")
+	if f.store.headNode.slot == currentSlot {
+		if err := f.updateSafeHead(ctx); err != nil {
+			log.WithError(err).Error("could not update safe head")
+		}
 	}
 
 	return h, nil
@@ -639,17 +640,19 @@ func (f *ForkChoice) UnrealizedJustifiedPayloadBlockHash() [32]byte {
 
 // SafeBlockHash returns the hash of the payload at the safe head
 func (f *ForkChoice) SafeBlockHash() [32]byte {
-	if !features.Get().EnableFastConfirmation {
+	switch params.BeaconConfig().SafeBlockAlgorithm {
+	case "justified":
+		return f.JustifiedPayloadBlockHash()
+	case "fast-confirmation":
+		safeHeadRoot := f.store.safeHeadRoot
+		node, ok := f.store.nodeByRoot[safeHeadRoot]
+		if !ok || node == nil {
+			return [32]byte{}
+		}
+		return node.payloadHash
+	default:
 		return f.UnrealizedJustifiedPayloadBlockHash()
 	}
-
-	safeHeadRoot := f.store.safeHeadRoot
-	node, ok := f.store.nodeByRoot[safeHeadRoot]
-	if !ok || node == nil {
-		// This should not happen
-		return [32]byte{}
-	}
-	return node.payloadHash
 }
 
 // ForkChoiceDump returns a full dump of forkchoice.

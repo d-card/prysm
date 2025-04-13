@@ -304,6 +304,11 @@ type BeaconChainConfig struct {
 	// DeprecatedTargetBlobsPerBlockElectra defines the target number of blobs per block post Electra hard fork.
 	// Deprecated: This field is no longer supported. Avoid using it.
 	DeprecatedTargetBlobsPerBlockElectra int `yaml:"TARGET_BLOBS_PER_BLOCK_ELECTRA" spec:"true"`
+
+	// Safe block config value
+	FastConfirmationByzantineThreshold uint64 // FastConfirmationByzantineThreshold is the Byzantine threshold percentage (0-100) used for fast confirmation.
+	SafeBlockAlgorithm                 string // SafeBlockAlgorithm is the algorithm for safe block selection
+
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
