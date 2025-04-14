@@ -121,6 +121,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//api/client:go_default_library",
         "//api/client/beacon/health:go_default_library",
         "//api/server/structs:go_default_library",
         "//async/event:go_default_library",
