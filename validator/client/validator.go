@@ -146,6 +146,7 @@ func (v *validator) Init(ctx context.Context) error {
 		currentSlot primitives.Slot
 		err         error
 	)
+
 	for {
 		if !firstTime {
 			if ctx.Err() != nil {
