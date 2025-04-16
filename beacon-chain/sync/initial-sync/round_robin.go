@@ -231,7 +231,6 @@ func (s *Service) processFetchedDataRegSync(ctx context.Context, data *blocksQue
 			}
 		}
 	}
-
 	return uint64(len(bwb)), nil
 }
 

@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     testonly = True,
-    srcs = ["custody_columns.go"],
+    srcs = ["custody_groups.go"],
     importpath = "github.com/OffchainLabs/prysm/v6/testing/spectest/shared/fulu/networking",
     visibility = ["//visibility:public"],
     deps = [

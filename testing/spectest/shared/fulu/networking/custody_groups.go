@@ -18,13 +18,13 @@ type Config struct {
 	Expected          []uint64 `yaml:"result"`
 }
 
-// RunCustodyColumnsTest executes custody columns spec tests.
-func RunCustodyColumnsTest(t *testing.T, config string) {
+// RunCustodyGroupsTest executes custody columns spec tests.
+func RunCustodyGroupsTest(t *testing.T, config string) {
 	err := utils.SetConfig(t, config)
 	require.NoError(t, err, "failed to set config")
 
 	// Retrieve the test vector folders.
-	testFolders, testsFolderPath := utils.TestFolders(t, config, "fulu", "networking/get_custody_columns/pyspec_tests")
+	testFolders, testsFolderPath := utils.TestFolders(t, config, "fulu", "networking/get_custody_groups/pyspec_tests")
 	if len(testFolders) == 0 {
 		t.Fatalf("no test folders found for %s", testsFolderPath)
 	}
@@ -51,12 +51,8 @@ func RunCustodyColumnsTest(t *testing.T, config string) {
 			nodeId := enode.ID(nodeIdBytes32)
 
 			// Compute the custody groups.
-			custodyGroups, err := peerdas.CustodyGroups(nodeId, config.CustodyGroupCount)
+			actual, err := peerdas.CustodyGroups(nodeId, config.CustodyGroupCount)
 			require.NoError(t, err, "failed to compute the custody groups")
-
-			// Compute the custody columns.
-			actual, err := peerdas.CustodyColumns(custodyGroups)
-			require.NoError(t, err, "failed to compute the custody columns")
 
 			// Compare the results.
 			require.Equal(t, len(config.Expected), len(actual), "expected %d custody columns, got %d", len(config.Expected), len(actual))

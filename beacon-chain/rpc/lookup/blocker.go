@@ -154,32 +154,43 @@ func (p *BeaconDbBlocker) blobsFromStoredBlobs(
 	slot primitives.Slot,
 	commitments [][]byte,
 ) ([]*blocks.VerifiedROBlob, *core.RpcError) {
+	sum := p.BlobStorage.Summary(bytesutil.ToBytes32(root))
+
 	if len(indices) == 0 {
-		sum := p.BlobStorage.Summary(bytesutil.ToBytes32(root))
 		for i := range commitments {
 			if sum.HasIndex(uint64(i)) {
 				indices[uint64(i)] = true
 			}
 		}
+	} else {
+		for ix := range indices {
+			if ix >= sum.MaxBlobsForEpoch() {
+				return nil, &core.RpcError{
+					Err:    fmt.Errorf("requested index %d is bigger than the maximum possible blob count %d", ix, sum.MaxBlobsForEpoch()),
+					Reason: core.BadRequest,
+				}
+			}
+			if !sum.HasIndex(ix) {
+				return nil, &core.RpcError{
+					Err:    fmt.Errorf("requested index %d not found", ix),
+					Reason: core.NotFound,
+				}
+			}
+		}
 	}
 
-	// Sort the indices to ensure the blobs are returned in the correct order.
-	// This is not specifically required by the spec, but it makes the response deterministic.
-	sortedIndices := uint64MapToSortedSlice(indices)
-
-	// returns empty slice if there are no indices
 	blobs := make([]*blocks.VerifiedROBlob, 0, len(indices))
-	for _, index := range sortedIndices {
+	for index := range indices {
 		vblob, err := p.BlobStorage.Get(bytesutil.ToBytes32(root), index)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"blockRoot": hexutil.Encode(root),
-				"blobIndex": index,
-			}).Error(errors.Wrapf(err, "could not retrieve blob for block root %#x at index %d", root, index))
-			return nil, &core.RpcError{Err: fmt.Errorf("could not retrieve blob for block root %#x at index %d", root, index), Reason: core.Internal}
+			return nil, &core.RpcError{
+				Err:    fmt.Errorf("could not retrieve blob for block root %#x at index %d", root, index),
+				Reason: core.Internal,
+			}
 		}
 		blobs = append(blobs, &vblob)
 	}
+
 	return blobs, nil
 }
 
