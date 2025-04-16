@@ -202,7 +202,8 @@ func (v *validator) Init(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Could not get keymanager")
 	}
-	// check if proposer settings is still nil
+
+	// Check if proposer settings is still nil.
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 	if v.ProposerSettings() == nil {
 		log.Warn("Validator client started without proposer settings such as fee recipient" +
