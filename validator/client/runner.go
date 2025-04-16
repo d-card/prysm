@@ -110,7 +110,7 @@ func run(ctx context.Context, v iface.Validator) {
 		case isHealthyAgain := <-healthTracker.HealthUpdates():
 			if isHealthyAgain {
 				if err = v.Init(ctx); err != nil {
-					log.WithError(err).Error("Failed to re initialize validator")
+					log.WithError(err).Fatal("Failed to reinitialize validator")
 					continue
 				}
 			}

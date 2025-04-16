@@ -335,44 +335,42 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB db.Database, km keym
 // it calls to the beacon node which then verifies the ETH1.0 deposit contract logs to check
 // for the ChainStart log to have been emitted. If so, it starts a ticker based on the ChainStart
 // unix timestamp which will be used to keep track of time within the validator client.
-func (v *validator) WaitForChainStart(ctx context.Context) (primitives.Slot, error) {
+func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
-	var currentSlot primitives.Slot
 	// First, check if the beacon chain has started.
 	log.Info("Syncing with beacon node to align on chain genesis info")
 
 	chainStartRes, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	if errors.Is(err, io.EOF) {
-		return currentSlot, client.ErrConnectionIssue
+		return client.ErrConnectionIssue
 	}
 
 	if errors.Is(ctx.Err(), context.Canceled) {
-		return currentSlot, errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
+		return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
 	}
 
 	if err != nil {
-		return currentSlot, errors.Wrap(
+		return errors.Wrap(
 			client.ErrConnectionIssue,
 			errors.Wrap(err, "could not receive ChainStart from stream").Error(),
 		)
 	}
 
 	v.genesisTime = chainStartRes.GenesisTime
-	currentSlot = slots.CurrentSlot(chainStartRes.GenesisTime)
 
 	curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
 	if err != nil {
-		return currentSlot, errors.Wrap(err, "could not get current genesis validators root")
+		return errors.Wrap(err, "could not get current genesis validators root")
 	}
 
 	if len(curGenValRoot) == 0 {
 		if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
-			return currentSlot, errors.Wrap(err, "could not save genesis validators root")
+			return errors.Wrap(err, "could not save genesis validators root")
 		}
 
 		v.setTicker()
-		return currentSlot, nil
+		return nil
 	}
 
 	if !bytes.Equal(curGenValRoot, chainStartRes.GenesisValidatorsRoot) {
@@ -382,7 +380,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) (primitives.Slot, err
 			clear the database. If not, please file an issue at https://github.com/prysmaticlabs/prysm/issues`,
 			cmd.ClearDB.Name,
 		)
-		return currentSlot, fmt.Errorf(
+		return fmt.Errorf(
 			"genesis validators root from beacon node (%#x) does not match root saved in validator db (%#x)",
 			chainStartRes.GenesisValidatorsRoot,
 			curGenValRoot,
@@ -390,7 +388,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) (primitives.Slot, err
 	}
 
 	v.setTicker()
-	return currentSlot, nil
+	return nil
 }
 
 func (v *validator) setTicker() {
