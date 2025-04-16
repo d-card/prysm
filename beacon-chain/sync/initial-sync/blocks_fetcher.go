@@ -129,11 +129,20 @@ type fetchRequestParams struct {
 // fetchRequestResponse is a combined type to hold results of both successful executions and errors.
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
 type fetchRequestResponse struct {
-	pid   peer.ID
-	start primitives.Slot
-	count uint64
-	bwb   []blocks.BlockWithROSidecars
-	err   error
+	blocksFrom peer.ID
+	blobsFrom  peer.ID
+	start      primitives.Slot
+	count      uint64
+	bwb        []blocks.BlockWithROSidecars
+	err        error
+}
+
+func (r *fetchRequestResponse) blocksQueueFetchedData() *blocksQueueFetchedData {
+	return &blocksQueueFetchedData{
+		blocksFrom: r.blocksFrom,
+		blobsFrom:  r.blobsFrom,
+		bwb:        r.bwb,
+	}
 }
 
 // newBlocksFetcher creates ready to use fetcher.
@@ -330,20 +339,22 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start primitives.Slot
 		}
 	}
 
-	response.bwb, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
-	if response.err != nil {
-		return response
-	}
+	response.bwb, response.blocksFrom, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
+	if response.err == nil {
+		pid, err := f.fetchSidecars(ctx, response.blocksFrom, peers, response.bwb)
+		if err != nil {
+			response.err = err
+		}
 
-	// Fetch sidecars for blocks in `response.bwb`.
-	response.err = f.fetchSidecars(ctx, response.pid, peers, response.bwb)
+		response.blobsFrom = pid
+	}
 
 	return response
 }
 
 // fetchSidecars fetches sidecars corresponding to blocks in `response.bwb`.
 // It mutates `Blobs` and `Columns` fields of `response.bwb` with fetched sidecars.
-func (f *blocksFetcher) fetchSidecars(ctx context.Context, pid peer.ID, peers []peer.ID, bwScs []blocks.BlockWithROSidecars) error {
+func (f *blocksFetcher) fetchSidecars(ctx context.Context, pid peer.ID, peers []peer.ID, bwScs []blocks.BlockWithROSidecars) (peer.ID, error) {
 	const batchSize = 32
 
 	// Find the first block with a slot greater than or equal to the first Fulu slot.
@@ -355,15 +366,25 @@ func (f *blocksFetcher) fetchSidecars(ctx context.Context, pid peer.ID, peers []
 	blocksWithBlobs := bwScs[:firstFuluIndex]
 	blocksWithDataColumns := bwScs[firstFuluIndex:]
 
+	if len(blocksWithBlobs) == 0 && len(blocksWithDataColumns) == 0 {
+		return "", nil
+	}
+
+	var (
+		blobsPid peer.ID
+		err      error
+	)
+
 	if len(blocksWithBlobs) > 0 {
 		// Fetch blob sidecars.
-		if err := f.fetchBlobsFromPeer(ctx, blocksWithBlobs, pid, peers); err != nil {
-			return errors.Wrap(err, "fetch blobs from peer")
+		blobsPid, err = f.fetchBlobsFromPeer(ctx, blocksWithBlobs, pid, peers)
+		if err != nil {
+			return "", errors.Wrap(err, "fetch blobs from peer")
 		}
 	}
 
 	if len(blocksWithDataColumns) == 0 {
-		return nil
+		return blobsPid, nil
 	}
 
 	// Extract blocks.
@@ -377,7 +398,7 @@ func (f *blocksFetcher) fetchSidecars(ctx context.Context, pid peer.ID, peers []
 	actualGroupCount := f.custodyInfo.ActualGroupCount()
 	fetchedDataColumnsByRoot, err := prysmsync.RequestMissingDataColumnsByRange(ctx, f.clock, f.ctxMap, f.p2p, f.rateLimiter, actualGroupCount, f.dcs, peers, dataColumnBlocks, batchSize)
 	if err != nil {
-		return errors.Wrap(err, "fetch missing data columns from peers")
+		return blobsPid, errors.Wrap(err, "fetch missing data columns from peers")
 	}
 
 	// Populate the response.
@@ -389,7 +410,8 @@ func (f *blocksFetcher) fetchSidecars(ctx context.Context, pid peer.ID, peers []
 		}
 	}
 
-	return nil
+	// TODO: Return the (multiple) peer IDs that provided the data columns and not only the one for blobs.
+	return blobsPid, nil
 }
 
 // fetchBlocksFromPeer fetches blocks from a single randomly selected peer, sorted by slot.
@@ -613,24 +635,24 @@ func missingCommitError(root [32]byte, slot primitives.Slot, missing [][]byte) e
 
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
 // This function mutates the input `bwb` argument.
-func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks.BlockWithROSidecars, pid peer.ID, peers []peer.ID) error {
+func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks.BlockWithROSidecars, pid peer.ID, peers []peer.ID) (peer.ID, error) {
 	if len(bwb) == 0 {
-		return nil
+		return "", nil
 	}
 
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlobsFromPeer")
 	defer span.End()
 	if slots.ToEpoch(f.clock.CurrentSlot()) < params.BeaconConfig().DenebForkEpoch {
-		return nil
+		return "", nil
 	}
 	blobWindowStart, err := prysmsync.BlobRPCMinValidSlot(f.clock.CurrentSlot())
 	if err != nil {
-		return err
+		return "", err
 	}
 	// Construct request message based on observed interval of blocks in need of blobs.
 	req := countCommitments(bwb, blobWindowStart).blobRange(f.bs).Request()
 	if req == nil {
-		return nil
+		return "", nil
 	}
 	peers = f.filterPeers(ctx, peers, peersPercentagePerRequest)
 	// We dial the initial peer first to ensure that we get the desired set of blobs.
@@ -652,9 +674,9 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks.Blo
 			log.WithField("peer", p).WithError(err).Debug("Invalid BeaconBlobsByRange response")
 			continue
 		}
-		return err
+		return p, err
 	}
-	return errNoPeersAvailable
+	return "", errNoPeersAvailable
 }
 
 // sortedSliceFromMap returns a sorted slice of keys from a map.

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"slices"
 	"strconv"
 
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/blockchain"
@@ -134,16 +133,6 @@ func (p *BeaconDbBlocker) Block(ctx context.Context, id []byte) (interfaces.Read
 		}
 	}
 	return blk, nil
-}
-
-// uint64MapToSortedSlice produces a sorted uint64 slice from a map.
-func uint64MapToSortedSlice(input map[uint64]bool) []uint64 {
-	output := make([]uint64, 0, len(input))
-	for idx := range input {
-		output = append(output, idx)
-	}
-	slices.Sort[[]uint64](output)
-	return output
 }
 
 // blobsFromStoredBlobs retrieves blobs corresponding to `indices` and `root` from the store.

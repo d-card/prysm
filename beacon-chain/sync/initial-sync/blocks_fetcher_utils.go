@@ -22,8 +22,9 @@ import (
 // Blocks are stored in an ascending slot order. The first block is guaranteed to have parent
 // either in DB or initial sync cache.
 type forkData struct {
-	peer peer.ID
-	bwb  []blocks.BlockWithROSidecars
+	blocksFrom peer.ID
+	blobsFrom  peer.ID
+	bwb        []blocks.BlockWithROSidecars
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
@@ -279,16 +280,16 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, peers
 			return nil, errors.Wrap(err, "invalid blocks received in findForkWithPeer")
 		}
 
-		if err := f.fetchSidecars(ctx, pid, peers, bwb); err != nil {
+		sidecarsPid, err := f.fetchSidecars(ctx, pid, peers, bwb)
+		if err != nil {
 			return nil, errors.Wrap(err, "fetch sidecars")
 		}
 
 		// We need to fetch the blobs for the given alt-chain if any exist, so that we can try to verify and import
 		// the blocks.
-
 		// The caller will use the BlocksWith VerifiedBlobs in bwb as the starting point for
 		// round-robin syncing the alternate chain.
-		return &forkData{peer: pid, bwb: bwb}, nil
+		return &forkData{blocksFrom: pid, blobsFrom: sidecarsPid, bwb: bwb}, nil
 	}
 	return nil, errNoAlternateBlocks
 }
@@ -304,12 +305,14 @@ func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, peers []p
 			if err != nil {
 				return nil, errors.Wrap(err, "received invalid blocks in findAncestor")
 			}
-			if err := f.fetchSidecars(ctx, pid, peers, bwb); err != nil {
+			sidecarsPid, err := f.fetchSidecars(ctx, pid, peers, bwb)
+			if err != nil {
 				return nil, errors.Wrap(err, "fetch sidecars")
 			}
 			return &forkData{
-				peer: pid,
-				bwb:  bwb,
+				blocksFrom: pid,
+				bwb:        bwb,
+				blobsFrom:  sidecarsPid,
 			}, nil
 		}
 		// Request block's parent.
