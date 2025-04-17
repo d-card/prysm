@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"testing"
 
 	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
@@ -339,5 +340,73 @@ func TestStore_BackfillFinalizedIndex(t *testing.T) {
 			}
 			return nil
 		}))
+	}
+}
+
+func TestStore_GetNonCanonicalBlockByRoot(t *testing.T) {
+	cfg := params.BeaconConfig()
+	cfg.SlotsPerEpoch = 4
+	params.OverrideBeaconConfig(cfg)
+
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
+	blocks0 := makeBlocks(t, slotsPerEpoch*0, slotsPerEpoch, genesisBlockRoot)
+	fmt.Println("len(blocks0)", len(blocks0))
+	for _, b := range blocks0 {
+		fmt.Println("blocks0", b.Block().Slot())
+	}
+	blocks1 := append(
+		makeBlocks(t, slotsPerEpoch*1, 1, bytesutil.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1]))), // No block builds off of the first block in epoch.
+		makeBlocks(t, slotsPerEpoch*1+1, slotsPerEpoch-1, bytesutil.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1])))...,
+	)
+	fmt.Println("len(blocks1)", len(blocks1))
+	for _, b := range blocks1 {
+		fmt.Println("blocks1", b.Block().Slot())
+	}
+	blocks2 := makeBlocks(t, slotsPerEpoch*2, slotsPerEpoch, bytesutil.ToBytes32(sszRootOrDie(t, blocks1[len(blocks1)-1])))
+
+	db := setupDB(t)
+	ctx := context.Background()
+
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
+	require.NoError(t, db.SaveBlocks(ctx, blocks0))
+	require.NoError(t, db.SaveBlocks(ctx, blocks1))
+	require.NoError(t, db.SaveBlocks(ctx, blocks2))
+
+	// First checkpoint
+	checkpoint1 := &ethpb.Checkpoint{
+		Root:  sszRootOrDie(t, blocks1[0]),
+		Epoch: 1,
+	}
+
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	// A state is required to save checkpoint
+	require.NoError(t, db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint1.Root)))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, checkpoint1))
+	// All blocks in blocks0 and blocks1 should be finalized and canonical.
+	for i, block := range append(blocks0, blocks1...) {
+		root := sszRootOrDie(t, block)
+		assert.Equal(t, true, db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(root)), "%d - Expected block %#x to be finalized", i, root)
+	}
+
+	// Second checkpoint
+	checkpoint2 := &ethpb.Checkpoint{
+		Root:  sszRootOrDie(t, blocks2[0]),
+		Epoch: 2,
+	}
+	// A state is required to save checkpoint
+	require.NoError(t, db.SaveState(ctx, st, bytesutil.ToBytes32(checkpoint2.Root)))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, checkpoint2))
+	// All blocks in blocks0 and blocks2 should be finalized and canonical.
+	for i, block := range append(blocks0, blocks2...) {
+		root := sszRootOrDie(t, block)
+		assert.Equal(t, true, db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(root)), "%d - Expected block %#x to be finalized", i, root)
+	}
+	// All blocks in blocks1 should be finalized and canonical, except blocks1[0].
+	for i, block := range blocks1 {
+		root := sszRootOrDie(t, block)
+		if db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(root)) == (i == 0) {
+			t.Errorf("Expected db.IsFinalizedBlock(ctx, blocks1[%d]) to be %v", i, i != 0)
+		}
 	}
 }
