@@ -121,7 +121,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 	processedPartialWithdrawalsCount := uint64(0)
 	var err error
 	if b.version >= version.Electra {
-		withdrawals, processedPartialWithdrawalsCount, err = b.processPendingPartialWithdrawals()
+		withdrawals, processedPartialWithdrawalsCount, err = b.processPendingPartialWithdrawals(withdrawals)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -183,8 +183,7 @@ func withdrawalTotal(ws []*enginev1.Withdrawal, idx primitives.ValidatorIndex) (
 	return
 }
 
-func (b *BeaconState) processPendingPartialWithdrawals() ([]*enginev1.Withdrawal, uint64, error) {
-	withdrawals := make([]*enginev1.Withdrawal, 0, params.BeaconConfig().MaxWithdrawalsPerPayload)
+func (b *BeaconState) processPendingPartialWithdrawals(withdrawals []*enginev1.Withdrawal) ([]*enginev1.Withdrawal, uint64, error) {
 	withdrawalIndex := b.nextWithdrawalIndex
 	epoch := slots.ToEpoch(b.slot)
 	processedPartialWithdrawalsCount := uint64(0)
