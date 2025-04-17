@@ -118,44 +118,12 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 	epoch := slots.ToEpoch(b.slot)
 
 	// Electra partial withdrawals functionality.
-	var processedPartialWithdrawalsCount uint64
+	processedPartialWithdrawalsCount := uint64(0)
+	var err error
 	if b.version >= version.Electra {
-		for _, w := range b.pendingPartialWithdrawals {
-			if w.WithdrawableEpoch > epoch || len(withdrawals) >= int(params.BeaconConfig().MaxPendingPartialsPerWithdrawalsSweep) {
-				break
-			}
-
-			v, err := b.validatorAtIndexReadOnly(w.Index)
-			if err != nil {
-				return nil, 0, fmt.Errorf("failed to determine withdrawals at index %d: %w", w.Index, err)
-			}
-			vBal, err := b.balanceAtIndex(w.Index)
-			if err != nil {
-				return nil, 0, fmt.Errorf("could not retrieve balance at index %d: %w", w.Index, err)
-			}
-			hasSufficientEffectiveBalance := v.EffectiveBalance() >= params.BeaconConfig().MinActivationBalance
-			var totalWithdrawn uint64
-			for _, wi := range withdrawals {
-				if wi.ValidatorIndex == w.Index {
-					totalWithdrawn += wi.Amount
-				}
-			}
-			balance, err := mathutil.Sub64(vBal, totalWithdrawn)
-			if err != nil {
-				return nil, 0, errors.Wrapf(err, "failed to subtract balance %d with total withdrawn %d", vBal, totalWithdrawn)
-			}
-			hasExcessBalance := balance > params.BeaconConfig().MinActivationBalance
-			if v.ExitEpoch() == params.BeaconConfig().FarFutureEpoch && hasSufficientEffectiveBalance && hasExcessBalance {
-				amount := min(balance-params.BeaconConfig().MinActivationBalance, w.Amount)
-				withdrawals = append(withdrawals, &enginev1.Withdrawal{
-					Index:          withdrawalIndex,
-					ValidatorIndex: w.Index,
-					Address:        v.GetWithdrawalCredentials()[12:],
-					Amount:         amount,
-				})
-				withdrawalIndex++
-			}
-			processedPartialWithdrawalsCount++
+		withdrawals, processedPartialWithdrawalsCount, err = b.processPendingPartialWithdrawals()
+		if err != nil {
+			return nil, 0, err
 		}
 	}
 
@@ -171,12 +139,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 			return nil, 0, errors.Wrapf(err, "could not retrieve balance at index %d", validatorIndex)
 		}
 		if b.version >= version.Electra {
-			var partiallyWithdrawnBalance uint64
-			for _, w := range withdrawals {
-				if w.ValidatorIndex == validatorIndex {
-					partiallyWithdrawnBalance += w.Amount
-				}
-			}
+			partiallyWithdrawnBalance := withdrawalTotal(withdrawals, validatorIndex)
 			balance, err = mathutil.Sub64(balance, partiallyWithdrawnBalance)
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "could not subtract balance %d with partial withdrawn balance %d", balance, partiallyWithdrawnBalance)
@@ -208,6 +171,55 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, uint64, err
 		}
 	}
 
+	return withdrawals, processedPartialWithdrawalsCount, nil
+}
+
+func withdrawalTotal(ws []*enginev1.Withdrawal, idx primitives.ValidatorIndex) (total uint64) {
+	for _, w := range ws {
+		if w.ValidatorIndex == idx {
+			total += w.Amount
+		}
+	}
+	return
+}
+
+func (b *BeaconState) processPendingPartialWithdrawals() ([]*enginev1.Withdrawal, uint64, error) {
+	withdrawals := make([]*enginev1.Withdrawal, 0, params.BeaconConfig().MaxWithdrawalsPerPayload)
+	withdrawalIndex := b.nextWithdrawalIndex
+	epoch := slots.ToEpoch(b.slot)
+	processedPartialWithdrawalsCount := uint64(0)
+	for _, w := range b.pendingPartialWithdrawals {
+		if w.WithdrawableEpoch > epoch || len(withdrawals) >= int(params.BeaconConfig().MaxPendingPartialsPerWithdrawalsSweep) {
+			break
+		}
+
+		v, err := b.validatorAtIndexReadOnly(w.Index)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to determine withdrawals at index %d: %w", w.Index, err)
+		}
+		vBal, err := b.balanceAtIndex(w.Index)
+		if err != nil {
+			return nil, 0, fmt.Errorf("could not retrieve balance at index %d: %w", w.Index, err)
+		}
+		hasSufficientEffectiveBalance := v.EffectiveBalance() >= params.BeaconConfig().MinActivationBalance
+		totalWithdrawn := withdrawalTotal(withdrawals, w.Index)
+		balance, err := mathutil.Sub64(vBal, totalWithdrawn)
+		if err != nil {
+			return nil, 0, errors.Wrapf(err, "failed to subtract balance %d with total withdrawn %d", vBal, totalWithdrawn)
+		}
+		hasExcessBalance := balance > params.BeaconConfig().MinActivationBalance
+		if v.ExitEpoch() == params.BeaconConfig().FarFutureEpoch && hasSufficientEffectiveBalance && hasExcessBalance {
+			amount := min(balance-params.BeaconConfig().MinActivationBalance, w.Amount)
+			withdrawals = append(withdrawals, &enginev1.Withdrawal{
+				Index:          withdrawalIndex,
+				ValidatorIndex: w.Index,
+				Address:        v.GetWithdrawalCredentials()[12:],
+				Amount:         amount,
+			})
+			withdrawalIndex++
+		}
+		processedPartialWithdrawalsCount++
+	}
 	return withdrawals, processedPartialWithdrawalsCount, nil
 }
 
