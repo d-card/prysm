@@ -3,7 +3,6 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"testing"
 
 	fieldparams "github.com/OffchainLabs/prysm/v6/config/fieldparams"
@@ -344,24 +343,12 @@ func TestStore_BackfillFinalizedIndex(t *testing.T) {
 }
 
 func TestStore_GetNonCanonicalBlockByRoot(t *testing.T) {
-	cfg := params.BeaconConfig()
-	cfg.SlotsPerEpoch = 4
-	params.OverrideBeaconConfig(cfg)
-
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	blocks0 := makeBlocks(t, slotsPerEpoch*0, slotsPerEpoch, genesisBlockRoot)
-	fmt.Println("len(blocks0)", len(blocks0))
-	for _, b := range blocks0 {
-		fmt.Println("blocks0", b.Block().Slot())
-	}
 	blocks1 := append(
 		makeBlocks(t, slotsPerEpoch*1, 1, bytesutil.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1]))), // No block builds off of the first block in epoch.
 		makeBlocks(t, slotsPerEpoch*1+1, slotsPerEpoch-1, bytesutil.ToBytes32(sszRootOrDie(t, blocks0[len(blocks0)-1])))...,
 	)
-	fmt.Println("len(blocks1)", len(blocks1))
-	for _, b := range blocks1 {
-		fmt.Println("blocks1", b.Block().Slot())
-	}
 	blocks2 := makeBlocks(t, slotsPerEpoch*2, slotsPerEpoch, bytesutil.ToBytes32(sszRootOrDie(t, blocks1[len(blocks1)-1])))
 
 	db := setupDB(t)
@@ -409,4 +396,12 @@ func TestStore_GetNonCanonicalBlockByRoot(t *testing.T) {
 			t.Errorf("Expected db.IsFinalizedBlock(ctx, blocks1[%d]) to be %v", i, i != 0)
 		}
 	}
+
+	require.Equal(t, false, db.IsFinalizedBlock(ctx, bytesutil.ToBytes32(sszRootOrDie(t, blocks1[0]))))
+
+	// Check that we can get the non-canonical block by root
+	blk, err := db.Block(ctx, bytesutil.ToBytes32(sszRootOrDie(t, blocks1[0])))
+	require.NoError(t, err)
+	require.NotNil(t, blk)
+	require.DeepEqual(t, blocks1[0], blk)
 }
