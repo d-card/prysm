@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -1746,34 +1747,44 @@ func (s *Server) GetAttestashionSlashings(w http.ResponseWriter, r *http.Request
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetAttestashionSlashings")
 	defer span.End()
 
-	epoch := r.PathValue("epoch")
-	if epoch == "" {
-		httputil.HandleError(w, "epoch is required in URL params", http.StatusBadRequest)
+	startEpoch := r.PathValue("start_epoch")
+	if startEpoch == "" {
+		httputil.HandleError(w, "startEpoch is required in URL params", http.StatusBadRequest)
 		return
 	}
-	epochInt, err := strconv.ParseUint(epoch, 10, 64)
+	startEpochInt, err := strconv.ParseUint(startEpoch, 10, 64)
 	if err != nil {
-		httputil.HandleError(w, "Could not parse epoch: "+err.Error(), http.StatusBadRequest)
+		httputil.HandleError(w, "Could not parse startEpoch: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	endEpoch := r.PathValue("end_epoch")
+	if endEpoch == "" {
+		httputil.HandleError(w, "endEpoch is required in URL params", http.StatusBadRequest)
+		return
+	}
+	endEpochInt, err := strconv.ParseUint(endEpoch, 10, 64)
+	if err != nil {
+		httputil.HandleError(w, "Could not parse endEpoch: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	startSlot, err := slots.EpochStart(primitives.Epoch(startEpochInt))
+	if err != nil {
+		httputil.HandleError(w, "Could not get start_epoch start slot: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	endSlot, err := slots.EpochEnd(primitives.Epoch(endEpochInt))
+	if err != nil {
+		httputil.HandleError(w, "Could not get end_epoch end slot: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch all seen attestations from the database and convert them to indexed attestations
 	var indexedAtts []*types.WrappedIndexedAtt
-	startSlot, err := slots.EpochStart(primitives.Epoch(epochInt))
-	if err != nil {
-		httputil.HandleError(w, "Could not get epoch start slot: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	endSlot, err := slots.EpochEnd(primitives.Epoch(epochInt))
-	if err != nil {
-		httputil.HandleError(w, "Could not get epoch end slot: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	for slot := startSlot; slot <= endSlot; slot++ {
 		blks, err := s.BeaconDB.BlocksBySlot(ctx, slot)
 		if err != nil {
-			httputil.HandleError(w, "Could not retrieve blocks for slot: "+err.Error(), http.StatusInternalServerError)
-			return
+			continue
 		}
 		for _, blk := range blks {
 			atts := blk.Block().Body().Attestations()
@@ -1800,4 +1811,62 @@ func (s *Server) GetAttestashionSlashings(w http.ResponseWriter, r *http.Request
 
 		}
 	}
+
+	slashingsPerVal, err := detectSlashings(indexedAtts)
+
+	fmt.Println(slashingsPerVal)
+
+}
+
+type AttestationSlashing struct {
+	A1 *types.WrappedIndexedAtt
+	A2 *types.WrappedIndexedAtt
+}
+
+func detectSlashings(indexedAtts []*types.WrappedIndexedAtt) (map[uint64][]*AttestationSlashing, error) {
+	// Group attestations by validator index
+	perVal := make(map[uint64][]*types.WrappedIndexedAtt)
+	for _, att := range indexedAtts {
+		for _, vid := range att.GetAttestingIndices() {
+			perVal[vid] = append(perVal[vid], att)
+		}
+	}
+
+	slashingsPerVal := make(map[uint64][]*AttestationSlashing)
+	// Detect slashings
+	for vid, atts := range perVal {
+		// double vote
+		seen := make(map[uint64]*types.WrappedIndexedAtt)
+		for _, att := range atts {
+			if prev, ok := seen[uint64(att.GetData().Target.Epoch)]; ok {
+				if uint64(prev.GetData().Source.Epoch) != uint64(att.GetData().Source.Epoch) {
+					slashingsPerVal[vid] = append(slashingsPerVal[vid], &AttestationSlashing{A1: prev, A2: att})
+				}
+			} else {
+				seen[uint64(att.GetData().Target.Epoch)] = att
+			}
+		}
+
+		// surround vote
+		// sort by source and target
+		sort.Slice(atts, func(i, j int) bool {
+			if uint64(atts[i].GetData().Source.Epoch) != uint64(atts[j].GetData().Source.Epoch) {
+				return uint64(atts[i].GetData().Source.Epoch) < uint64(atts[j].GetData().Source.Epoch)
+			}
+			return uint64(atts[i].GetData().Target.Epoch) < uint64(atts[j].GetData().Target.Epoch)
+		})
+
+		maxAtt := atts[0]
+		for _, att := range atts[1:] {
+			if uint64(att.GetData().Target.Epoch) < uint64(maxAtt.GetData().Source.Epoch) {
+				slashingsPerVal[vid] = append(slashingsPerVal[vid], &AttestationSlashing{A1: maxAtt, A2: att})
+			}
+			if uint64(att.GetData().Target.Epoch) > uint64(maxAtt.GetData().Target.Epoch) {
+				maxAtt = att
+			}
+		}
+
+	}
+
+	return slashingsPerVal, nil
 }
