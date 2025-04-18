@@ -104,6 +104,17 @@ func Test_MerkleProofKZGCommitment(t *testing.T) {
 	require.Equal(t, true, trie.VerifyMerkleProof(root[:], chunk[0][:], uint64(index+KZGOffset), proof))
 }
 
+func TestMerkleProofKZGCommitments(t *testing.T) {
+	t.Run("invalid version", func(t *testing.T) {
+		pbBody := &ethpb.BeaconBlockBodyAltair{}
+
+		body, err := NewBeaconBlockBody(pbBody)
+		require.NoError(t, err)
+		_, err = MerkleProofKZGCommitments(body)
+		require.ErrorIs(t, errUnsupportedBeaconBlockBody, err)
+	})
+}
+
 // This test explains the calculation of the KZG commitment root's Merkle index
 // in the Body's Merkle tree based on the index of the KZG commitment list in the Body.
 func Test_KZGRootIndex(t *testing.T) {
