@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	//go:embed trusted_setup.json
+	// https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/trusted_setups/trusted_setup_4096.json
+	//go:embed trusted_setup_4096.json
 	embeddedTrustedSetup []byte // 1.2Mb
 	kzgContext           *GoKZG.Context
 	kzgLoaded            bool
@@ -29,9 +30,11 @@ func Start() error {
 	if err != nil {
 		return errors.Wrap(err, "could not parse trusted setup JSON")
 	}
+
 	kzgContext, err = GoKZG.NewContext4096(&GoKZG.JSONTrustedSetup{
 		SetupG2:         trustedSetup.G2Monomial[:],
-		SetupG1Lagrange: trustedSetup.G1Lagrange})
+		SetupG1Lagrange: trustedSetup.G1Lagrange,
+	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize go-kzg context")
 	}
