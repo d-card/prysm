@@ -40,29 +40,18 @@ func run(ctx context.Context, v iface.Validator) {
 		if errors.Is(err, context.Canceled) {
 			return // Exit if context is canceled.
 		}
-		log.WithError(err).Fatal("Failed to initialize validator")
+		log.WithError(err).Error("Failed to initialize validator")
+		return
 	}
-
-	eventsChan := make(chan *event.Event, 1)
-	healthTracker := v.HealthTracker()
-	runHealthCheckRoutine(ctx, v, eventsChan)
-
-	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
-	km, err := v.Keymanager()
-	if err != nil {
-		log.WithError(err).Fatal("Could not get keymanager")
-	}
-	sub := km.SubscribeAccountChanges(accountsChangedChan)
-
+	tracker := v.HealthTracker()
+	runHealthCheckRoutine(ctx, v)
 	for {
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
-			sub.Unsubscribe()
-			close(accountsChangedChan)
 			return // Exit if context is canceled.
 		case slot := <-v.NextSlot():
-			if !healthTracker.IsHealthy(ctx) {
+			if !tracker.IsHealthy(ctx) {
 				continue
 			}
 
@@ -88,7 +77,7 @@ func run(ctx context.Context, v iface.Validator) {
 			// call push proposer settings often to account for the following edge cases:
 			// proposer is activated at the start of epoch and tries to propose immediately
 			// account has changed in the middle of an epoch
-			if err := v.PushProposerSettings(slotCtx, km, slot, false); err != nil {
+			if err := v.PushProposerSettings(slotCtx, slot, false); err != nil {
 				log.WithError(err).Warn("Failed to update proposer settings")
 			}
 
@@ -107,22 +96,22 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
-		case isHealthyAgain := <-healthTracker.HealthUpdates():
+		case isHealthyAgain := <-tracker.HealthUpdates():
 			if isHealthyAgain {
-				if err = v.Init(ctx); err != nil {
+				if err := v.Init(ctx); err != nil {
 					log.WithError(err).Fatal("Failed to reinitialize validator")
 					continue
 				}
 			}
-		case e := <-eventsChan:
+		case e := <-v.EventsChan():
 			v.ProcessEvent(ctx, e)
-		case currentKeys := <-accountsChangedChan: // should be less of a priority than next slot
-			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
+		case currentKeys := <-v.AccountsChangedChan(): // should be less of a priority than next slot
+			onAccountsChanged(ctx, v, currentKeys)
 		}
 	}
 }
 
-func onAccountsChanged(ctx context.Context, v iface.Validator, current [][48]byte, ac chan [][fieldparams.BLSPubkeyLength]byte) {
+func onAccountsChanged(ctx context.Context, v iface.Validator, current [][48]byte) {
 	ctx, span := prysmTrace.StartSpan(ctx, "validator.accountsChanged")
 	defer span.End()
 
@@ -132,7 +121,7 @@ func onAccountsChanged(ctx context.Context, v iface.Validator, current [][48]byt
 	}
 	if !anyActive {
 		log.Warn("No active keys found. Waiting for activation...")
-		err := v.WaitForActivation(ctx, ac)
+		err := v.WaitForActivation(ctx)
 		if err != nil {
 			log.WithError(err).Warn("Could not wait for validator activation")
 		}
@@ -201,7 +190,7 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 	}
 }
 
-func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan chan<- *event.Event) {
+func runHealthCheckRoutine(ctx context.Context, v iface.Validator) {
 	log.Info("Starting health check routine for beacon node apis")
 	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	tracker := v.HealthTracker()
@@ -223,7 +212,7 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator, eventsChan ch
 			// in case of node returning healthy but event stream died
 			if isHealthy && !v.EventStreamIsRunning() {
 				log.Info("Event stream reconnecting...")
-				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChan)
+				go v.StartEventStream(ctx, event.DefaultEventTopics)
 			}
 		}
 	}()

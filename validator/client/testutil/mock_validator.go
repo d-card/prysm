@@ -63,11 +63,21 @@ type FakeValidator struct {
 	Tracker                           health.Tracker
 	AttSubmitted                      chan interface{}
 	BlockProposed                     chan interface{}
+	AccountsChannel                   chan [][fieldparams.BLSPubkeyLength]byte
+	EventsChannel                     chan *event.Event
 }
 
 // Done for mocking.
 func (fv *FakeValidator) Done() {
 	fv.DoneCalled = true
+}
+
+func (fv *FakeValidator) EventsChan() <-chan *event.Event {
+	return fv.EventsChannel
+}
+
+func (fv *FakeValidator) AccountsChangedChan() <-chan [][fieldparams.BLSPubkeyLength]byte {
+	return fv.AccountsChannel
 }
 
 func (fv *FakeValidator) Init(ctx context.Context) error {
@@ -93,9 +103,9 @@ func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 }
 
 // WaitForActivation for mocking.
-func (fv *FakeValidator) WaitForActivation(_ context.Context, accountChan chan [][fieldparams.BLSPubkeyLength]byte) error {
+func (fv *FakeValidator) WaitForActivation(_ context.Context) error {
 	fv.WaitForActivationCalled++
-	if accountChan == nil {
+	if fv.AccountsChannel == nil {
 		return nil
 	}
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
@@ -258,7 +268,7 @@ func (*FakeValidator) HasProposerSettings() bool {
 }
 
 // PushProposerSettings for mocking
-func (fv *FakeValidator) PushProposerSettings(ctx context.Context, _ keymanager.IKeymanager, _ primitives.Slot, _ bool) error {
+func (fv *FakeValidator) PushProposerSettings(ctx context.Context, _ primitives.Slot, _ bool) error {
 	time.Sleep(fv.ProposerSettingWait)
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		log.Error("deadline exceeded")
@@ -312,8 +322,7 @@ func (fv *FakeValidator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPub
 	return nil
 }
 
-func (*FakeValidator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
-
+func (*FakeValidator) StartEventStream(_ context.Context, _ []string) {
 }
 
 func (*FakeValidator) ProcessEvent(_ context.Context, _ *event.Event) {}

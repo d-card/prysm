@@ -3,6 +3,8 @@ package health
 import (
 	"context"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type NodeHealthTracker struct {
@@ -48,6 +50,10 @@ func (n *NodeHealthTracker) CheckHealth(ctx context.Context) bool {
 		n.isHealthy = &newStatus
 		// Send the new status to the health channel, potentially overwriting the existing value
 		select {
+		case <-ctx.Done():
+			log.Info("health check was canceled")
+			close(n.healthChan)
+			return false
 		case <-n.healthChan:
 			n.healthChan <- newStatus
 		default:

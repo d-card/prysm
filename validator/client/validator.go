@@ -116,6 +116,9 @@ type validator struct {
 	attSelectionLock                   sync.Mutex
 	dutiesLock                         sync.RWMutex
 	disableDutiesPolling               bool
+	accountsChangedChannel             chan [][fieldparams.BLSPubkeyLength]byte
+	eventsChannel                      chan *eventClient.Event
+	accountChangesSub                  event.Subscription
 }
 
 type validatorStatus struct {
@@ -131,7 +134,24 @@ type attSelectionKey struct {
 
 // Done cleans up the validator.
 func (v *validator) Done() {
+	if v.accountChangesSub != nil {
+		v.accountChangesSub.Unsubscribe()
+	}
+	if v.accountsChangedChannel != nil {
+		close(v.accountsChangedChannel)
+	}
+	if v.eventsChannel != nil {
+		close(v.eventsChannel)
+	}
 	v.ticker.Done()
+}
+
+func (v *validator) EventsChan() <-chan *eventClient.Event {
+	return v.eventsChannel
+}
+
+func (v *validator) AccountsChangedChan() <-chan [][fieldparams.BLSPubkeyLength]byte {
+	return v.accountsChangedChannel
 }
 
 func (v *validator) Init(ctx context.Context) error {
@@ -142,7 +162,6 @@ func (v *validator) Init(ctx context.Context) error {
 	defer ticker.Stop()
 
 	firstTime := true
-
 	for {
 		if !firstTime {
 			if ctx.Err() != nil {
@@ -175,7 +194,7 @@ func (v *validator) Init(ctx context.Context) error {
 			return errors.Wrap(err, "Could not determine if beacon node synced")
 		}
 
-		if err := v.WaitForActivation(ctx, nil /* accountsChangedChan */); err != nil {
+		if err := v.WaitForActivation(ctx); err != nil {
 			return errors.Wrap(err, "Could not wait for validator activation")
 		}
 
@@ -194,18 +213,13 @@ func (v *validator) Init(ctx context.Context) error {
 		handleAssignmentError(err, currentSlot)
 	}
 
-	km, err := v.Keymanager()
-	if err != nil {
-		return errors.Wrap(err, "Could not get keymanager")
-	}
-
 	// Check if proposer settings is still nil.
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 	if v.ProposerSettings() == nil {
 		log.Warn("Validator client started without proposer settings such as fee recipient" +
 			" and will continue to use settings provided in the beacon node.")
 	}
-	if err := v.PushProposerSettings(ctx, km, currentSlot, true); err != nil {
+	if err := v.PushProposerSettings(ctx, currentSlot, true); err != nil {
 		return errors.Wrap(err, "Failed to update proposer settings")
 	}
 	return nil
@@ -250,6 +264,7 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 		return errors.New("key manager not set")
 	}
 	recheckKeys(ctx, v.db, v.km)
+	v.accountChangesSub = v.km.SubscribeAccountChanges(v.accountsChangedChannel)
 	return nil
 }
 
@@ -1161,12 +1176,13 @@ func (v *validator) SetProposerSettings(ctx context.Context, settings *proposer.
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
-func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, forceFullPush bool) error {
+func (v *validator) PushProposerSettings(ctx context.Context, slot primitives.Slot, forceFullPush bool) error {
 	ctx, span := trace.StartSpan(ctx, "validator.PushProposerSettings")
 	defer span.End()
 
-	if km == nil {
-		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
+	km, err := v.Keymanager()
+	if err != nil {
+		return err
 	}
 
 	pubkeys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1214,9 +1230,9 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	return nil
 }
 
-func (v *validator) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *eventClient.Event) {
+func (v *validator) StartEventStream(ctx context.Context, topics []string) {
 	log.WithField("topics", topics).Info("Starting event stream")
-	v.validatorClient.StartEventStream(ctx, topics, eventsChannel)
+	v.validatorClient.StartEventStream(ctx, topics, v.eventsChannel)
 }
 
 func (v *validator) checkDependentRoots(ctx context.Context, head *structs.HeadEvent) error {
