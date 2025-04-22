@@ -4,6 +4,7 @@ import (
 	"github.com/OffchainLabs/prysm/v6/config/params"
 	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
+	lightclientTypes "github.com/OffchainLabs/prysm/v6/consensus-types/light-client"
 	"github.com/OffchainLabs/prysm/v6/consensus-types/wrapper"
 	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
 	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
@@ -36,6 +37,9 @@ var (
 	// AttesterSlashingMap maps the fork-version to the underlying data type for that particular
 	// fork period.
 	AttesterSlashingMap map[[4]byte]func() (ethpb.AttSlashing, error)
+	// LightClientOptimisticUpdateMap maps the fork-version to the underlying data type for that
+	// particular fork period.
+	LightClientOptimisticUpdateMap map[[4]byte]func() (interfaces.LightClientOptimisticUpdate, error)
 )
 
 // InitializeDataMaps initializes all the relevant object maps. This function is called to
@@ -177,6 +181,25 @@ func InitializeDataMaps() {
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().FuluForkVersion): func() (ethpb.AttSlashing, error) {
 			return &ethpb.AttesterSlashingElectra{}, nil
+		},
+	}
+
+	// Reset our light client optimistic update map.
+	LightClientOptimisticUpdateMap = map[[4]byte]func() (interfaces.LightClientOptimisticUpdate, error){
+		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (interfaces.LightClientOptimisticUpdate, error) {
+			return lightclientTypes.NewWrappedOptimisticUpdate(&ethpb.LightClientOptimisticUpdateAltair{})
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (interfaces.LightClientOptimisticUpdate, error) {
+			return lightclientTypes.NewWrappedOptimisticUpdate(&ethpb.LightClientOptimisticUpdateAltair{})
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().CapellaForkVersion): func() (interfaces.LightClientOptimisticUpdate, error) {
+			return lightclientTypes.NewWrappedOptimisticUpdate(&ethpb.LightClientOptimisticUpdateCapella{})
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion): func() (interfaces.LightClientOptimisticUpdate, error) {
+			return lightclientTypes.NewWrappedOptimisticUpdate(&ethpb.LightClientOptimisticUpdateDeneb{})
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().ElectraForkVersion): func() (interfaces.LightClientOptimisticUpdate, error) {
+			return lightclientTypes.NewWrappedOptimisticUpdate(&ethpb.LightClientOptimisticUpdateDeneb{})
 		},
 	}
 }
