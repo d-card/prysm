@@ -107,7 +107,7 @@ func run(ctx context.Context, v iface.Validator) {
 					}
 
 					log.WithError(err).
-						Errorf("re‑initialization attempt %d/%d failed", attempt, maxAttempts)
+						Errorf("Re‑initialization attempt %d/%d failed", attempt, maxAttempts)
 
 					if attempt == maxAttempts {
 						log.Error("Maximum re‑initialization attempts reached, stopping validator")
