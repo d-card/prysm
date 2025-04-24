@@ -25,9 +25,6 @@ import (
 // Time to wait before trying to reconnect with beacon node.
 var backOffPeriod = 10 * time.Second
 
-// dutiesDeadline is the deadline we give to update duties
-const dutiesDeadline = primitives.Slot(5)
-
 // Run the main validator routine. This routine exits if the context is
 // canceled.
 //
@@ -46,7 +43,12 @@ func run(ctx context.Context, v iface.Validator) {
 	if err != nil {
 		return // Exit if context is canceled.
 	}
-	deadline := v.SlotDeadline(headSlot + dutiesDeadline)
+	endEpoch, err := slots.EpochEnd(slots.ToEpoch(headSlot))
+	if err != nil {
+		log.WithError(err).Error("Could not get current epoch")
+		return
+	}
+	deadline := v.SlotDeadline(endEpoch)
 	dutiesCtx, cancel := context.WithDeadline(ctx, deadline)
 	defer cancel()
 	if err := v.UpdateDuties(dutiesCtx, headSlot); err != nil {
@@ -83,7 +85,12 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 
-			deadline := v.SlotDeadline(slot + dutiesDeadline)
+			endEpoch, err := slots.EpochEnd(slots.ToEpoch(slot))
+			if err != nil {
+				log.WithError(err).Error("Could not get current epoch")
+				continue
+			}
+			deadline := v.SlotDeadline(endEpoch)
 			dutiesCtx, cancel := context.WithDeadline(ctx, deadline)
 
 			var span trace.Span
@@ -139,7 +146,12 @@ func run(ctx context.Context, v iface.Validator) {
 					log.WithError(err).Error("Failed to re initialize validator and get head slot")
 					continue
 				}
-				dutiesCtx, cancel := context.WithDeadline(ctx, v.SlotDeadline(headSlot+dutiesDeadline))
+				endEpoch, err := slots.EpochEnd(slots.ToEpoch(headSlot))
+				if err != nil {
+					log.WithError(err).Error("Could not get current epoch")
+					continue
+				}
+				dutiesCtx, cancel := context.WithDeadline(ctx, v.SlotDeadline(endEpoch))
 				if err := v.UpdateDuties(dutiesCtx, headSlot); err != nil {
 					handleAssignmentError(err, headSlot)
 					cancel()
