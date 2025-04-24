@@ -207,20 +207,20 @@ func (s *BlobSidecarsByRootReq) Len() int {
 }
 
 // ===================================
-// DataColumnSidecarsByRootReq section
+// DataColumnsByRootIdentifiers section
 // ===================================
-var _ ssz.Marshaler = (*DataColumnSidecarsByRootReq)(nil)
-var _ ssz.Unmarshaler = (*DataColumnSidecarsByRootReq)(nil)
-var _ sort.Interface = (*DataColumnSidecarsByRootReq)(nil)
+var _ ssz.Marshaler = (*DataColumnsByRootIdentifiers)(nil)
+var _ ssz.Unmarshaler = (*DataColumnsByRootIdentifiers)(nil)
+var _ sort.Interface = (*DataColumnsByRootIdentifiers)(nil)
 
-// DataColumnSidecarsByRootReq is used to specify a list of data column targets (root+index) in a DataColumnSidecarsByRoot RPC request.
-type DataColumnSidecarsByRootReq []*eth.DataColumnIdentifier
+// DataColumnsByRootIdentifiers is used to specify a list of data column targets (root+index) in a DataColumnSidecarsByRoot RPC request.
+type DataColumnsByRootIdentifiers []*eth.DataColumnsByRootIdentifier
 
 // DataColumnIdentifier is a fixed size value, so we can compute its fixed size at start time (see init below)
 var dataColumnIdSize int
 
 // UnmarshalSSZ implements ssz.Unmarshaler. It unmarshals the provided bytes buffer into the DataColumnSidecarsByRootReq value.
-func (d *DataColumnSidecarsByRootReq) UnmarshalSSZ(buf []byte) error {
+func (d *DataColumnsByRootIdentifiers) UnmarshalSSZ(buf []byte) error {
 	bufLen := len(buf)
 	maxLen := int(params.BeaconConfig().MaxRequestDataColumnSidecars) * dataColumnIdSize
 	if bufLen > maxLen {
@@ -230,9 +230,9 @@ func (d *DataColumnSidecarsByRootReq) UnmarshalSSZ(buf []byte) error {
 		return errors.Wrapf(ssz.ErrIncorrectByteSize, "size=%d", bufLen)
 	}
 	count := bufLen / dataColumnIdSize
-	*d = make([]*eth.DataColumnIdentifier, count)
+	*d = make([]*eth.DataColumnsByRootIdentifier, count)
 	for i := 0; i < count; i++ {
-		id := &eth.DataColumnIdentifier{}
+		id := &eth.DataColumnsByRootIdentifier{}
 		err := id.UnmarshalSSZ(buf[i*dataColumnIdSize : (i+1)*dataColumnIdSize])
 		if err != nil {
 			return err
@@ -243,7 +243,7 @@ func (d *DataColumnSidecarsByRootReq) UnmarshalSSZ(buf []byte) error {
 }
 
 // MarshalSSZ implements ssz.Marshaler. It serializes the DataColumnSidecarsByRootReq value to a byte slice.
-func (d *DataColumnSidecarsByRootReq) MarshalSSZ() ([]byte, error) {
+func (d *DataColumnsByRootIdentifiers) MarshalSSZ() ([]byte, error) {
 	buf := make([]byte, d.SizeSSZ())
 	for i, id := range *d {
 		bytes, err := id.MarshalSSZ()
@@ -257,7 +257,7 @@ func (d *DataColumnSidecarsByRootReq) MarshalSSZ() ([]byte, error) {
 }
 
 // MarshalSSZTo implements ssz.Marshaler. It appends the serialized DataColumnSidecarsByRootReq value to the provided byte slice.
-func (d *DataColumnSidecarsByRootReq) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (d *DataColumnsByRootIdentifiers) MarshalSSZTo(dst []byte) ([]byte, error) {
 	mobj, err := d.MarshalSSZ()
 	if err != nil {
 		return nil, err
@@ -266,27 +266,27 @@ func (d *DataColumnSidecarsByRootReq) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // SizeSSZ implements ssz.Marshaler. It returns the size of the serialized representation.
-func (d *DataColumnSidecarsByRootReq) SizeSSZ() int {
+func (d *DataColumnsByRootIdentifiers) SizeSSZ() int {
 	return len(*d) * dataColumnIdSize
 }
 
 // Len implements sort.Interface. It returns the number of elements in the collection.
-func (d *DataColumnSidecarsByRootReq) Len() int {
+func (d *DataColumnsByRootIdentifiers) Len() int {
 	return len(*d)
 }
 
 // Less implements sort.Interface. It reports whether the element with index i must sort before the element with index j.
-func (d *DataColumnSidecarsByRootReq) Less(i, j int) bool {
+func (d *DataColumnsByRootIdentifiers) Less(i, j int) bool {
 	rootCmp := bytes.Compare((*d)[i].BlockRoot, (*d)[j].BlockRoot)
 	if rootCmp != 0 {
 		return rootCmp < 0
 	}
 
-	return (*d)[i].Index < (*d)[j].Index
+	return (*d)[i].Columns[0] < (*d)[j].Columns[0]
 }
 
 // Swap implements sort.Interface. It swaps the elements with indexes i and j.
-func (d *DataColumnSidecarsByRootReq) Swap(i, j int) {
+func (d *DataColumnsByRootIdentifiers) Swap(i, j int) {
 	(*d)[i], (*d)[j] = (*d)[j], (*d)[i]
 }
 
@@ -294,6 +294,6 @@ func init() {
 	blobSizer := &eth.BlobIdentifier{}
 	blobIdSize = blobSizer.SizeSSZ()
 
-	dataColumnSizer := &eth.DataColumnIdentifier{}
+	dataColumnSizer := &eth.DataColumnSidecarsByRangeRequest{}
 	dataColumnIdSize = dataColumnSizer.SizeSSZ()
 }
