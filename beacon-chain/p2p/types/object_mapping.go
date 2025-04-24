@@ -4,7 +4,7 @@ import (
 	"github.com/OffchainLabs/prysm/v6/config/params"
 	"github.com/OffchainLabs/prysm/v6/consensus-types/blocks"
 	"github.com/OffchainLabs/prysm/v6/consensus-types/interfaces"
-	lightclientTypes "github.com/OffchainLabs/prysm/v6/consensus-types/light-client"
+	lightclientConsensusTypes "github.com/OffchainLabs/prysm/v6/consensus-types/light-client"
 	"github.com/OffchainLabs/prysm/v6/consensus-types/wrapper"
 	"github.com/OffchainLabs/prysm/v6/encoding/bytesutil"
 	enginev1 "github.com/OffchainLabs/prysm/v6/proto/engine/v1"
@@ -190,24 +190,24 @@ func InitializeDataMaps() {
 	// Reset our light client optimistic update map.
 	LightClientOptimisticUpdateMap = map[[4]byte]func() (interfaces.LightClientOptimisticUpdate, error){
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (interfaces.LightClientOptimisticUpdate, error) {
-			return lightclientTypes.NewWrappedOptimisticUpdate(&ethpb.LightClientOptimisticUpdateAltair{AttestedHeader: &ethpb.LightClientHeaderAltair{}})
+			return &lightclientConsensusTypes.OptimisticUpdateAltair{}, nil
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (interfaces.LightClientOptimisticUpdate, error) {
-			return lightclientTypes.NewWrappedOptimisticUpdate(&ethpb.LightClientOptimisticUpdateAltair{AttestedHeader: &ethpb.LightClientHeaderAltair{}})
+			return &lightclientConsensusTypes.OptimisticUpdateAltair{}, nil
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().CapellaForkVersion): func() (interfaces.LightClientOptimisticUpdate, error) {
-			return lightclientTypes.NewWrappedOptimisticUpdate(&ethpb.LightClientOptimisticUpdateCapella{AttestedHeader: &ethpb.LightClientHeaderCapella{}})
+			return &lightclientConsensusTypes.OptimisticUpdateCapella{}, nil
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().DenebForkVersion): func() (interfaces.LightClientOptimisticUpdate, error) {
-			return lightclientTypes.NewWrappedOptimisticUpdate(&ethpb.LightClientOptimisticUpdateDeneb{AttestedHeader: &ethpb.LightClientHeaderDeneb{}})
+			return &lightclientConsensusTypes.OptimisticUpdateDeneb{}, nil
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().ElectraForkVersion): func() (interfaces.LightClientOptimisticUpdate, error) {
-			return lightclientTypes.NewWrappedOptimisticUpdate(&ethpb.LightClientOptimisticUpdateDeneb{AttestedHeader: &ethpb.LightClientHeaderDeneb{}})
+			return &lightclientConsensusTypes.OptimisticUpdateDeneb{}, nil
 		},
 	}
 	//LightClientFinalityUpdateMap = map[[4]byte]func() (interfaces.LightClientFinalityUpdate, error){
 	//	bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (interfaces.LightClientFinalityUpdate, error) {
-	//		return lightclientTypes.NewWrappedFinalityUpdate(&ethpb.LightClientFinalityUpdateAltair{AttestedHeader: &ethpb.LightClientHeaderAltair{}})
+	//		return lightclientConsensusTypes.NewWrappedFinalityUpdate(&ethpb.LightClientFinalityUpdateAltair{AttestedHeader: &ethpb.LightClientHeaderAltair{}})
 	//	},
 	//}
 }
