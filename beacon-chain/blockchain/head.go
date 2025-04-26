@@ -328,7 +328,7 @@ func (s *Service) notifyNewHeadEvent(
 	newHeadRoot []byte,
 ) error {
 	currEpoch := slots.ToEpoch(newHeadSlot)
-	currentDutyDependentRoot, err := s.DependentRoot(currEpoch)
+	currentDutyDependentRoot, err := s.cfg.ForkChoiceStore.DependentRoot(currEpoch)
 	if err != nil {
 		return errors.Wrap(err, "could not get duty dependent root")
 	}
@@ -337,7 +337,7 @@ func (s *Service) notifyNewHeadEvent(
 	}
 	previousDutyDependentRoot := currentDutyDependentRoot
 	if currEpoch > 0 {
-		previousDutyDependentRoot, err = s.DependentRoot(currEpoch.Sub(1))
+		previousDutyDependentRoot, err = s.cfg.ForkChoiceStore.DependentRoot(currEpoch.Sub(1))
 		if err != nil {
 			return errors.Wrap(err, "could not get duty dependent root")
 		}
