@@ -333,17 +333,11 @@ func populateAndFilterIndices(indices map[uint64]bool, blobCount uint64) []uint6
 	}
 
 	// Filter blobs index higher than the blob count.
-	filteredIndices := make(map[uint64]bool, len(indices))
+	indicesSlice := make([]uint64, 0, len(indices))
 	for i := range indices {
 		if i < blobCount {
-			filteredIndices[i] = true
+			indicesSlice = append(indicesSlice, i)
 		}
-	}
-
-	// Transform set to slice.
-	indicesSlice := make([]uint64, 0, len(filteredIndices))
-	for i := range filteredIndices {
-		indicesSlice = append(indicesSlice, i)
 	}
 
 	// Sort the indices.
