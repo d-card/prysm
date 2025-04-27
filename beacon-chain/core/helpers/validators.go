@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/cache"
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/time"
@@ -299,9 +300,12 @@ func ProposerIndexAtSlotFromCheckpoint(c *forkchoicetypes.Checkpoint, slot primi
 // BeaconProposerIndexAtSlot returns proposer index at the given slot from the
 // point of view of the given state as head state
 func BeaconProposerIndexAtSlot(ctx context.Context, state state.ReadOnlyBeaconState, slot primitives.Slot) (primitives.ValidatorIndex, error) {
+	pid, err := GetCachedProposerIndex(state, slot)
+	if err == nil {
+		return pid, nil
+	}
+
 	e := slots.ToEpoch(slot)
-	// The cache uses the state root of the previous epoch - minimum_seed_lookahead last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
-	// For simplicity, the node will skip caching of genesis epoch.
 	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
 		s, err := slots.EpochEnd(e - 1)
 		if err != nil {
@@ -312,14 +316,10 @@ func BeaconProposerIndexAtSlot(ctx context.Context, state state.ReadOnlyBeaconSt
 			return 0, err
 		}
 		if r != nil && !bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
-			pid, err := cachedProposerIndexAtSlot(slot, [32]byte(r))
-			if err == nil {
-				return pid, nil
-			}
 			if err := UpdateProposerIndicesInCache(ctx, state, e); err != nil {
 				return 0, errors.Wrap(err, "could not update proposer index cache")
 			}
-			pid, err = cachedProposerIndexAtSlot(slot, [32]byte(r))
+			pid, err := cachedProposerIndexAtSlot(slot, [32]byte(r))
 			if err == nil {
 				return pid, nil
 			}
@@ -340,6 +340,34 @@ func BeaconProposerIndexAtSlot(ctx context.Context, state state.ReadOnlyBeaconSt
 	}
 
 	return ComputeProposerIndex(state, indices, seedWithSlotHash)
+}
+
+var ErrProposerNotFound = errors.New("invalid nil or unknown node")
+
+func GetCachedProposerIndex(state state.ReadOnlyBeaconState, slot primitives.Slot) (primitives.ValidatorIndex, error) {
+	epoch := slots.ToEpoch(slot)
+	if epoch <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+		return 0, fmt.Errorf("epoch %d is too early to get cached proposer index", epoch)
+	}
+
+	endSlot, err := slots.EpochEnd(epoch - 1)
+	if err != nil {
+		return 0, err
+	}
+
+	root, err := StateRootAtSlot(state, endSlot)
+	if err != nil {
+		return 0, err
+	}
+	if root == nil || bytes.Equal(root, params.BeaconConfig().ZeroHash[:]) {
+		return 0, ErrProposerNotFound
+	}
+
+	proposerIndex, err := cachedProposerIndexAtSlot(slot, [32]byte(root))
+	if err != nil {
+		return 0, ErrProposerNotFound
+	}
+	return proposerIndex, nil
 }
 
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.

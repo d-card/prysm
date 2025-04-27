@@ -699,35 +699,27 @@ func (s *Server) fillEventData(ctx context.Context, ev payloadattribute.EventDat
 	var err error
 	var st state.BeaconState
 
-	// If head is in the same block as the proposal slot, we can use the "read only" state cache.
-	pse := slots.ToEpoch(ev.ProposalSlot)
-	if slots.ToEpoch(ev.HeadBlock.Block().Slot()) == pse {
-		st = s.StateGen.StateByRootIfCachedNoCopy(ev.HeadRoot)
-	}
-	// If st is nil, we couldn't get the state from the cache, or it isn't in the same epoch.
-	if st == nil || st.IsNil() {
+	proposalSlot := ev.ProposalSlot
+
+	index, err := helpers.GetCachedProposerIndex(st, proposalSlot)
+	if err == nil {
+		ev.ProposerIndex = index
+	} else {
 		st, err = s.StateGen.StateByRoot(ctx, ev.HeadRoot)
 		if err != nil {
 			return ev, errors.Wrap(err, "could not get head state")
 		}
-		// double check that we need to process_slots, just in case we got here via a hot state cache miss.
-		if slots.ToEpoch(st.Slot()) == pse {
-			start, err := slots.EpochStart(pse)
-			if err != nil {
-				return ev, errors.Wrap(err, "invalid state slot; could not compute epoch start")
-			}
-			st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, ev.HeadRoot[:], start)
-			if err != nil {
-				return ev, errors.Wrap(err, "could not run process blocks on head state into the proposal slot epoch")
-			}
+		st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, ev.HeadRoot[:], proposalSlot)
+		if err != nil {
+			return ev, errors.Wrap(err, "could not run process blocks on head state into the proposal slot epoch")
+		}
+		ev.ProposerIndex, err = helpers.BeaconProposerIndexAtSlot(ctx, st, ev.ProposalSlot)
+		if err != nil {
+			return ev, errors.Wrap(err, "failed to compute proposer index")
 		}
 	}
 
-	ev.ProposerIndex, err = helpers.BeaconProposerIndexAtSlot(ctx, st, ev.ProposalSlot)
-	if err != nil {
-		return ev, errors.Wrap(err, "failed to compute proposer index")
-	}
-	randao, err := helpers.RandaoMix(st, pse)
+	randao, err := helpers.RandaoMix(st, slots.ToEpoch(proposalSlot))
 	if err != nil {
 		return ev, errors.Wrap(err, "could not get head state randado")
 	}
