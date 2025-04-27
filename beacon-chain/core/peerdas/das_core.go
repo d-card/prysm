@@ -21,7 +21,7 @@ import (
 var (
 	// Custom errors
 	ErrCustodyGroupTooLarge           = errors.New("custody group too large")
-	errCustodyGroupCountTooLarge      = errors.New("custody group count too large")
+	ErrCustodyGroupCountTooLarge      = errors.New("custody group count too large")
 	errWrongComputedCustodyGroupCount = errors.New("wrong computed custody group count, should never happen")
 
 	// maxUint256 is the maximum value of an uint256.
@@ -42,7 +42,7 @@ func CustodyGroups(nodeId enode.ID, custodyGroupCount uint64) ([]uint64, error) 
 
 	// Check if the custody group count is larger than the number of custody groups.
 	if custodyGroupCount > numberOfCustodyGroup {
-		return nil, errCustodyGroupCountTooLarge
+		return nil, ErrCustodyGroupCountTooLarge
 	}
 
 	one := uint256.NewInt(1)

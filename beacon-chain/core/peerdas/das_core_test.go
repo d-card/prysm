@@ -10,12 +10,16 @@ import (
 	ethpb "github.com/OffchainLabs/prysm/v6/proto/prysm/v1alpha1"
 	"github.com/OffchainLabs/prysm/v6/testing/require"
 	"github.com/OffchainLabs/prysm/v6/testing/util"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/pkg/errors"
 )
 
-// ---------------------------------------------------------------
-// ( CustodyGroups is unit tested in spec tests.                 )
-// ---------------------------------------------------------------
+func TestCustodyGroups(t *testing.T) {
+	// The happy path is unit tested in spec tests.
+	numberOfCustodyGroup := params.BeaconConfig().NumberOfCustodyGroups
+	_, err := peerdas.CustodyGroups(enode.ID{}, numberOfCustodyGroup+1)
+	require.ErrorIs(t, err, peerdas.ErrCustodyGroupCountTooLarge)
+}
 
 func TestComputeColumnsForCustodyGroup(t *testing.T) {
 	// The happy path is unit tested in spec tests.
