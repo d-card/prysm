@@ -137,12 +137,12 @@ func (v *validator) Done() {
 	if v.accountChangesSub != nil {
 		v.accountChangesSub.Unsubscribe()
 	}
-	if v.accountsChangedChannel != nil {
-		close(v.accountsChangedChannel)
-	}
-	if v.eventsChannel != nil {
-		close(v.eventsChannel)
-	}
+	//if v.accountsChangedChannel != nil {
+	//	close(v.accountsChangedChannel)
+	//}
+	//if v.eventsChannel != nil {
+	//	close(v.eventsChannel)
+	//}
 	if v.ticker != nil {
 		v.ticker.Done()
 	}
@@ -154,6 +154,13 @@ func (v *validator) EventsChan() <-chan *eventClient.Event {
 
 func (v *validator) AccountsChangedChan() <-chan [][fieldparams.BLSPubkeyLength]byte {
 	return v.accountsChangedChannel
+}
+
+func (v *validator) GenesisTime() (uint64, error) {
+	if v.genesisTime == 0 {
+		return 0, errors.New("genesis time not set")
+	}
+	return v.genesisTime, nil
 }
 
 func (v *validator) Init(ctx context.Context) error {
@@ -211,8 +218,12 @@ func (v *validator) Init(ctx context.Context) error {
 		break
 	}
 	currentSlot := slots.CurrentSlot(v.genesisTime) // set in v.WaitForChainStart
-	if err := v.UpdateDuties(ctx, currentSlot); err != nil {
-		handleAssignmentError(err, currentSlot)
+	epochStart, err := slots.EpochStart(slots.ToEpoch(currentSlot))
+	if err != nil {
+		return errors.Wrapf(err, "Could not get epoch start from current slot %d", currentSlot)
+	}
+	if err := v.UpdateDuties(ctx, epochStart); err != nil {
+		handleAssignmentError(err, epochStart)
 		return errors.Wrap(err, "Could not update duties")
 	}
 
@@ -225,7 +236,12 @@ func (v *validator) Init(ctx context.Context) error {
 	if err := v.PushProposerSettings(ctx, currentSlot, true); err != nil {
 		return errors.Wrap(err, "Failed to update proposer settings")
 	}
-	return nil
+	v.setTicker()
+	log.WithFields(logrus.Fields{
+		"slot":                 currentSlot,
+		"time_until_next_slot": time.Until(v.SlotDeadline(currentSlot)),
+	}).Debug("Validator run initialization completed.")
+	return nil // finally wait until the next slot
 }
 
 // WaitForKeymanagerInitialization checks if the validator needs to wait for keymanager initialization.
@@ -387,7 +403,6 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 			return errors.Wrap(err, "could not save genesis validators root")
 		}
 
-		v.setTicker()
 		return nil
 	}
 
@@ -405,7 +420,6 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 		)
 	}
 
-	v.setTicker()
 	return nil
 }
 
@@ -1304,11 +1318,11 @@ func (v *validator) ProcessEvent(ctx context.Context, event *eventClient.Event) 
 			return
 		}
 		v.setHighestSlot(primitives.Slot(uintSlot))
-		if !v.disableDutiesPolling {
-			if err := v.checkDependentRoots(ctx, head); err != nil {
-				log.WithError(err).Error("Failed to check dependent roots")
-			}
-		}
+		//if !v.disableDutiesPolling {
+		//	if err := v.checkDependentRoots(ctx, head); err != nil {
+		//		log.WithError(err).Error("Failed to check dependent roots")
+		//	}
+		//}
 	default:
 		// just keep going and log the error
 		log.WithField("type", event.EventType).WithField("data", string(event.Data)).Warn("Received an unknown event")

@@ -17,9 +17,14 @@ import (
 	"github.com/OffchainLabs/prysm/v6/time/slots"
 	"github.com/OffchainLabs/prysm/v6/validator/client/iface"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	slotDeadlineThreshold = 2 * time.Second
 )
 
 // Run the main validator routine. This routine exits if the context is
@@ -32,30 +37,43 @@ import (
 // 4 - Update assignments
 // 5 - Determine role at current slot
 // 6 - Perform assigned role, if any
-func run(ctx context.Context, v iface.Validator) {
+func run(ctx context.Context, v iface.Validator) error {
 	cleanup := v.Done
 	defer cleanup()
 
 	if err := v.Init(ctx); err != nil {
 		if errors.Is(err, context.Canceled) {
-			return // Exit if context is canceled.
+			return nil // Exit if context is canceled.
 		}
-		log.WithError(err).Fatal("Failed to initialize validator")
-		return
+		return errors.Wrap(err, "failed to initialize validator")
 	}
 	tracker := v.HealthTracker()
 	runHealthCheckRoutine(ctx, v)
+	genesisTime, err := v.GenesisTime()
+	if err != nil {
+		return errors.Wrap(err, "failed to get genesis time")
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
-			return // Exit if context is canceled.
+			return nil // Exit if context is canceled.
 		case slot := <-v.NextSlot():
 			if !tracker.IsHealthy(ctx) {
 				continue
 			}
-
 			deadline := v.SlotDeadline(slot)
+			if time.Until(deadline) < slotDeadlineThreshold {
+				log.WithFields(logrus.Fields{
+					"slot":                slot,
+					"current_slot":        slots.CurrentSlot(genesisTime),
+					"time_until_deadline": time.Until(deadline),
+					"deadline":            deadline,
+					"threshold":           slotDeadlineThreshold,
+				}).Debug("Skipping slot duties, too close or past deadline")
+				continue
+			}
+
 			slotCtx, cancel := context.WithDeadline(ctx, deadline)
 
 			var span trace.Span
@@ -98,29 +116,11 @@ func run(ctx context.Context, v iface.Validator) {
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
 		case isHealthyAgain := <-tracker.HealthUpdates():
 			if isHealthyAgain {
-				const maxAttempts = 5
-				const backoffDelay = 2 * time.Second
-				for attempt := 1; attempt <= maxAttempts; attempt++ {
-					err := v.Init(ctx)
-					if err == nil {
-						break // success
+				if err := v.Init(ctx); err != nil {
+					if errors.Is(err, context.Canceled) {
+						return nil // Exit if context is canceled.
 					}
-
-					log.WithError(err).
-						Errorf("Re‑initialization attempt %d/%d failed", attempt, maxAttempts)
-
-					if attempt == maxAttempts {
-						log.Error("Maximum re‑initialization attempts reached, stopping validator")
-						return
-					}
-
-					// brief back‑off or exit early if the parent context ends
-					select {
-					case <-time.After(backoffDelay):
-					case <-ctx.Done():
-						log.Info("Context canceled, stopping validator")
-						return // Exit if context is canceled.
-					}
+					return errors.Wrap(err, "failed to re-initialize validator")
 				}
 			}
 		case e := <-v.EventsChan():

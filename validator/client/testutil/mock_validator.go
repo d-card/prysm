@@ -65,6 +65,7 @@ type FakeValidator struct {
 	BlockProposed                     chan interface{}
 	AccountsChannel                   chan [][fieldparams.BLSPubkeyLength]byte
 	EventsChannel                     chan *event.Event
+	GenesisT                          uint64
 }
 
 // Done for mocking.
@@ -78,6 +79,10 @@ func (fv *FakeValidator) EventsChan() <-chan *event.Event {
 
 func (fv *FakeValidator) AccountsChangedChan() <-chan [][fieldparams.BLSPubkeyLength]byte {
 	return fv.AccountsChannel
+}
+
+func (fv *FakeValidator) GenesisTime() (uint64, error) {
+	return fv.GenesisT, nil
 }
 
 func (fv *FakeValidator) Init(ctx context.Context) error {

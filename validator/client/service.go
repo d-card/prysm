@@ -227,7 +227,11 @@ func (v *ValidatorService) Start() {
 	}
 
 	v.validator = valStruct
-	go run(v.ctx, v.validator)
+	go func() {
+		if err = run(v.ctx, v.validator); err != nil {
+			log.WithError(err).Error("Error running validator")
+		}
+	}()
 }
 
 // Stop the validator service.
