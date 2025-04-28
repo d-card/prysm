@@ -49,18 +49,23 @@ func TestComputeCustodyGroupForColumn(t *testing.T) {
 	})
 
 	t.Run("nominal", func(t *testing.T) {
-		expected := uint64(1)
+		expected := uint64(2)
 		actual, err := peerdas.ComputeCustodyGroupForColumn(2)
 		require.NoError(t, err)
 		require.Equal(t, expected, actual)
 
-		expected = uint64(1)
+		expected = uint64(3)
 		actual, err = peerdas.ComputeCustodyGroupForColumn(3)
 		require.NoError(t, err)
 		require.Equal(t, expected, actual)
 
 		expected = uint64(2)
-		actual, err = peerdas.ComputeCustodyGroupForColumn(4)
+		actual, err = peerdas.ComputeCustodyGroupForColumn(66)
+		require.NoError(t, err)
+		require.Equal(t, expected, actual)
+
+		expected = uint64(3)
+		actual, err = peerdas.ComputeCustodyGroupForColumn(67)
 		require.NoError(t, err)
 		require.Equal(t, expected, actual)
 	})

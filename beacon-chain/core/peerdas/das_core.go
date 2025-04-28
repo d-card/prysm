@@ -207,8 +207,7 @@ func ComputeCustodyGroupForColumn(columnIndex uint64) (uint64, error) {
 		return 0, ErrIndexTooLarge
 	}
 
-	columnsPerGroup := numberOfColumns / numberOfCustodyGroups
-	return columnIndex / columnsPerGroup, nil
+	return columnIndex % numberOfCustodyGroups, nil
 }
 
 // Blobs extract blobs from `dataColumnsSidecar`.
