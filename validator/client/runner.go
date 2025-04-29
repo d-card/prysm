@@ -49,10 +49,7 @@ func run(ctx context.Context, v iface.Validator) error {
 	}
 	tracker := v.HealthTracker()
 	runHealthCheckRoutine(ctx, v)
-	genesisTime, err := v.GenesisTime()
-	if err != nil {
-		return errors.Wrap(err, "failed to get genesis time")
-	}
+	genesisTime := v.GenesisTime()
 	for {
 		select {
 		case <-ctx.Done():

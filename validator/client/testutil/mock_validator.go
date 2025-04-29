@@ -83,8 +83,8 @@ func (fv *FakeValidator) AccountsChangedChan() <-chan [][fieldparams.BLSPubkeyLe
 	return fv.AccountsChannel
 }
 
-func (fv *FakeValidator) GenesisTime() (uint64, error) {
-	return fv.GenesisT, nil
+func (fv *FakeValidator) GenesisTime() uint64 {
+	return fv.GenesisT
 }
 
 func (fv *FakeValidator) Init(ctx context.Context) error {

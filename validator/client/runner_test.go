@@ -14,6 +14,7 @@ import (
 	"github.com/OffchainLabs/prysm/v6/consensus-types/primitives"
 	"github.com/OffchainLabs/prysm/v6/testing/assert"
 	"github.com/OffchainLabs/prysm/v6/testing/require"
+	"github.com/OffchainLabs/prysm/v6/time/slots"
 	"github.com/OffchainLabs/prysm/v6/validator/client/iface"
 	"github.com/OffchainLabs/prysm/v6/validator/client/testutil"
 	"github.com/ethereum/go-ethereum/common"
@@ -53,10 +54,12 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
+	ss, err := slots.EpochStart(slots.ToEpoch(slot))
+	require.NoError(t, err)
 	ticker := make(chan primitives.Slot)
 	v.NextSlotRet = ticker
 	go func() {
-		ticker <- slot
+		ticker <- ss
 
 		cancel()
 	}()
@@ -79,10 +82,12 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
+	ss, err := slots.EpochStart(slots.ToEpoch(slot))
+	require.NoError(t, err)
 	ticker := make(chan primitives.Slot)
 	v.NextSlotRet = ticker
 	go func() {
-		ticker <- slot
+		ticker <- ss
 
 		cancel()
 	}()
@@ -105,18 +110,20 @@ func TestRoleAt_NextSlot(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	slot := primitives.Slot(55)
+	ss, err := slots.EpochStart(slots.ToEpoch(slot))
+	require.NoError(t, err)
 	ticker := make(chan primitives.Slot)
 	v.NextSlotRet = ticker
 	go func() {
-		ticker <- slot
+		ticker <- ss
 
 		cancel()
 	}()
 
 	require.NoError(t, run(ctx, v))
 
-	require.Equal(t, true, v.RoleAtCalled, "Expected RoleAt(%d) to be called", slot)
-	assert.Equal(t, uint64(slot), v.RoleAtArg1, "RoleAt called with the wrong arg")
+	require.Equal(t, true, v.RoleAtCalled, "Expected RoleAt(%d) to be called", ss)
+	assert.Equal(t, uint64(ss), v.RoleAtArg1, "RoleAt called with the wrong arg")
 }
 
 func TestAttests_NextSlot(t *testing.T) {
@@ -308,6 +315,7 @@ func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
 	v.NextSlotRet = ticker
 	go func() {
 		ticker <- slot
+		time.Sleep(1 * time.Second)
 		cancel()
 	}()
 

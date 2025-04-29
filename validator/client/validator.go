@@ -137,12 +137,6 @@ func (v *validator) Done() {
 	if v.accountChangedSub != nil {
 		v.accountChangedSub.Unsubscribe()
 	}
-	//if v.accountsChangedChannel != nil {
-	//	close(v.accountsChangedChannel)
-	//}
-	//if v.eventsChannel != nil {
-	//	close(v.eventsChannel)
-	//}
 	if v.ticker != nil {
 		v.ticker.Done()
 	}
@@ -156,11 +150,8 @@ func (v *validator) AccountsChangedChan() <-chan [][fieldparams.BLSPubkeyLength]
 	return v.accountsChangedChannel
 }
 
-func (v *validator) GenesisTime() (uint64, error) {
-	if v.genesisTime == 0 {
-		return 0, errors.New("genesis time not set")
-	}
-	return v.genesisTime, nil
+func (v *validator) GenesisTime() uint64 {
+	return v.genesisTime
 }
 
 func (v *validator) Init(ctx context.Context) error {
@@ -218,11 +209,11 @@ func (v *validator) Init(ctx context.Context) error {
 		break
 	}
 	currentSlot := slots.CurrentSlot(v.genesisTime) // set in v.WaitForChainStart
-	epochStart, err := slots.EpochStart(slots.ToEpoch(currentSlot))
+	epochStart, err := slots.EpochStart(slots.ToEpoch(currentSlot) + 1)
 	if err != nil {
 		return errors.Wrapf(err, "Could not get epoch start from current slot %d", currentSlot)
 	}
-	if err := v.UpdateDuties(ctx, epochStart); err != nil {
+	if err := v.UpdateDuties(ctx); err != nil {
 		handleAssignmentError(err, epochStart)
 		return errors.Wrap(err, "Could not update duties")
 	}

@@ -73,7 +73,7 @@ type Validator interface {
 	HealthTracker() health.Tracker
 	Host() string
 	ChangeHost()
-	GenesisTime() (uint64, error)
+	GenesisTime() uint64
 }
 
 // SigningFunc interface defines a type for the function that signs a message
