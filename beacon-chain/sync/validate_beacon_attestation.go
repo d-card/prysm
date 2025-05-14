@@ -12,6 +12,7 @@ import (
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed"
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/feed/operation"
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/core/helpers"
+	"github.com/OffchainLabs/prysm/v6/beacon-chain/logging"
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/p2p"
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/slasher/types"
 	"github.com/OffchainLabs/prysm/v6/beacon-chain/state"
@@ -26,6 +27,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // Validation
@@ -70,6 +72,67 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 	}
 
 	data := att.GetData()
+	var committeeIndex primitives.CommitteeIndex
+	var committee []primitives.ValidatorIndex
+
+	// Get state at slot
+	root := bytesutil.ToBytes32(data.BeaconBlockRoot)
+	state, err := s.cfg.stateGen.StateByRoot(ctx, root)
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+
+	if att.Version() >= version.Electra && !att.IsSingle() {
+		// Get committee index from committee bits
+		bits := att.CommitteeBitsVal()
+		committeeIndex = primitives.CommitteeIndex(bits.BitIndices()[0])
+	} else {
+		// Get committee index directly
+		committeeIndex = att.GetCommitteeIndex()
+	}
+
+	// Get actual committee from slot and committee index
+	committee, err = helpers.BeaconCommitteeFromState(ctx, state, data.Slot, committeeIndex)
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+
+	// Calculate attesting indices
+	var validatorKeys []string
+	if att.Version() >= version.Electra && att.IsSingle() {
+		// Get index directly
+		validator, err := state.ValidatorAtIndexReadOnly(att.GetAttestingIndex())
+		if err != nil {
+			return pubsub.ValidationIgnore, err
+		}
+		validatorKeys = []string{fmt.Sprintf("%#x", validator.PublicKey())}
+	} else {
+		// Get indices from aggregation bits
+		bits := att.GetAggregationBits()
+		for i := uint64(0); i < uint64(bits.Len()); i++ {
+			if bits.BitAt(i) {
+				validator, err := state.ValidatorAtIndexReadOnly(committee[i])
+				if err != nil {
+					return pubsub.ValidationIgnore, err
+				}
+				validatorKeys = append(validatorKeys, fmt.Sprintf("%#x", validator.PublicKey()))
+			}
+		}
+	}
+	if len(validatorKeys) == 1 && validatorKeys[0] == "0x8f186c70e253e77b8c77cc1e97e3744d35fc60fb7a354f40e781e40322622dac773c9593d883ba6c02be72b23b8bd09c" {
+		logging.AttestationLogger.WithFields(logrus.Fields{
+			"senderPeerID":   pid.String(),
+			"senderAddress":  multiAddr(pid, s.cfg.p2p.Peers()),
+			"validator":     validatorKeys[0],
+			"slot":          data.Slot,
+			// "committeeIndex": committeeIndex,
+			// "blockRoot":     fmt.Sprintf("%#x", data.BeaconBlockRoot),
+			// "sourceEpoch":   data.Source.Epoch,
+			"targetEpoch":   data.Target.Epoch,
+			// "isAggregated":  att.IsAggregated(),
+			// "isSingle":      att.IsSingle(),n
+		}).Info("Received attestation from peer")
+	}
 
 	// Do not process slot 0 attestations.
 	if data.Slot == 0 {
@@ -86,7 +149,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 		return pubsub.ValidationReject, err
 	}
 
-	committeeIndex := att.GetCommitteeIndex()
+	committeeIndex = att.GetCommitteeIndex()
 
 	if !s.slasherEnabled {
 		// Verify this the first attestation received for the participating validator for the slot.
@@ -128,7 +191,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 		return validationRes, err
 	}
 
-	committee, err := helpers.BeaconCommitteeFromState(ctx, preState, data.Slot, committeeIndex)
+	committee, err = helpers.BeaconCommitteeFromState(ctx, preState, data.Slot, committeeIndex)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
@@ -360,11 +423,36 @@ func (s *Service) hasSeenUnaggregatedAtt(att eth.Att) bool {
 		attester = uint64(att.GetAggregationBits().BitIndices()[0])
 	}
 
+	// Check for same validator in different slots
+	// attesterID := fmt.Sprintf("%d", attester)
+	// lastSlot, exists := s.seenUnAggregatedAttestationCache.Get(attesterID)
+	// if exists && lastSlot.(uint64) != uint64(att.GetData().Slot) {
+	// 	state, err := s.cfg.stateGen.StateByRoot(context.Background(), bytesutil.ToBytes32(att.GetData().BeaconBlockRoot))
+	// 	if err == nil {
+	// 		validator, err := state.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(attester))
+	// 		if err == nil {
+	// 			logging.AttestationLogger.WithFields(logrus.Fields{
+	// 				"validatorPubKey": fmt.Sprintf("%#x", validator.PublicKey()),
+	// 				"oldSlot":       lastSlot,
+	// 				"newSlot":       att.GetData().Slot,
+	// 			}).Debug("Received attestation from same validator in different slot")
+	// 		}
+	// 	}
+	// }
+
 	b := make([]byte, 24)
 	binary.LittleEndian.PutUint64(b, uint64(att.GetData().Slot))
 	binary.LittleEndian.PutUint64(b[8:16], uint64(att.GetCommitteeIndex()))
 	binary.LittleEndian.PutUint64(b[16:], attester)
 	_, seen := s.seenUnAggregatedAttestationCache.Get(string(b))
+	// if seen {
+	// 	logging.AttestationLogger.WithFields(logrus.Fields{
+	// 		"slot":           att.GetData().Slot,
+	// 		"committeeIndex": att.GetCommitteeIndex(),
+	// 		"attester":       attester,
+	// 		"blockRoot":      fmt.Sprintf("%#x", att.GetData().BeaconBlockRoot),
+	// 	}).Info("Received duplicate attestation from different peer")
+	// }
 	return seen
 }
 
@@ -388,6 +476,10 @@ func (s *Service) setSeenUnaggregatedAtt(att eth.Att) {
 		}
 		attester = uint64(att.GetAggregationBits().BitIndices()[0])
 	}
+
+	// // Store slot and validator
+	// attesterID := fmt.Sprintf("%d", attester)
+	// s.seenUnAggregatedAttestationCache.Add(attesterID, uint64(att.GetData().Slot))
 
 	b := make([]byte, 24)
 	binary.LittleEndian.PutUint64(b, uint64(att.GetData().Slot))

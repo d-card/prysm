@@ -36,6 +36,11 @@ import (
 
 const pubsubMessageTimeout = 30 * time.Second
 
+type contextKey string
+const (
+	peerID contextKey = "peer_id"
+)
+
 // wrappedVal represents a gossip validator which also returns an error along with the result.
 type wrappedVal func(context.Context, peer.ID, *pubsub.Message) (pubsub.ValidationResult, error)
 
@@ -258,6 +263,9 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 			return
 		}
+
+		// Add peer ID to context
+		ctx = context.WithValue(ctx, peerID, msg.ReceivedFrom)
 
 		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
 			tracing.AnnotateError(span, err)
