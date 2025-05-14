@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -82,6 +83,76 @@ func (s *Service) activeSyncSubnetIndices(currentSlot primitives.Slot) []uint64 
 	return slice.SetUint64(subs)
 }
 
+// getAttestationSubnetsIncludingTracked determines the attestation subnets to subscribe to.
+// It includes both the persistent/aggregator subnets and any subnets required for the
+// hardcoded tracked validator.
+func (s *Service) getAttestationSubnetsIncludingTracked(currentSlot primitives.Slot) []uint64 {
+	ctx := s.ctx // Use service context
+	if ctx == nil {
+		ctx = context.Background() // Fallback context
+	}
+	var blockRootForSlot [fieldparams.RootLength]byte
+
+	headRootBytes, err := s.cfg.chain.HeadRoot(ctx)
+	if err != nil {
+		log.WithError(err).WithField("slot", currentSlot).Error("Failed to get head root for tracked validator subnet calculation, falling back to default subnets.")
+		return s.persistentAndAggregatorSubnetIndices(currentSlot)
+	}
+	if len(headRootBytes) != fieldparams.RootLength {
+		log.WithFields(logrus.Fields{
+			"slot": currentSlot,
+			"len":  len(headRootBytes),
+		}).Error("Invalid head root length for tracked validator subnet calculation, falling back to default subnets.")
+		return s.persistentAndAggregatorSubnetIndices(currentSlot)
+	}
+	var headRoot [fieldparams.RootLength]byte
+	copy(headRoot[:], headRootBytes)
+
+	var actualBlockRootForSlotBytes []byte
+	currentChainHeadSlot := s.cfg.chain.HeadSlot()
+
+	if currentSlot == currentChainHeadSlot {
+		actualBlockRootForSlotBytes = headRootBytes
+	} else if currentSlot < currentChainHeadSlot {
+		ancestorBytes, errAncestor := s.cfg.chain.Ancestor(ctx, headRoot[:], currentSlot)
+		if errAncestor != nil {
+			log.WithError(errAncestor).WithFields(logrus.Fields{
+				"currentSlot":      currentSlot,
+				"headSlot":         currentChainHeadSlot,
+				"headRoot":         hexutil.Encode(headRoot[:]),
+			}).Error("Failed to get ancestor root for tracked validator subnet calculation, falling back to default subnets.")
+			return s.persistentAndAggregatorSubnetIndices(currentSlot)
+		}
+		actualBlockRootForSlotBytes = ancestorBytes
+	} else { // currentSlot > currentChainHeadSlot
+		log.WithFields(logrus.Fields{
+			"currentSlot": currentSlot,
+			"headSlot":    currentChainHeadSlot,
+		}).Warn("Current slot is ahead of chain head. Using head state for subnet calculation.")
+		// Use headRootBytes (which is the root of currentChainHeadSlot) for the calculation.
+		// newPersistentAndTrackedValidatorSubnetIndices will receive currentSlot (for epoch determination)
+		// and headRootBytes (as the state root to use for the current epoch part of the scan).
+		actualBlockRootForSlotBytes = headRootBytes // Use head's root
+	}
+
+	if len(actualBlockRootForSlotBytes) != fieldparams.RootLength {
+		log.WithFields(logrus.Fields{
+			"slot": currentSlot,
+			"len":  len(actualBlockRootForSlotBytes),
+		}).Error("Invalid block root length for currentSlot for tracked validator subnet calculation, falling back to default subnets.")
+		return s.persistentAndAggregatorSubnetIndices(currentSlot)
+	}
+	copy(blockRootForSlot[:], actualBlockRootForSlotBytes)
+	
+	var zeroRoot [fieldparams.RootLength]byte
+	if bytes.Equal(blockRootForSlot[:], zeroRoot[:]) {
+		log.WithField("slot", currentSlot).Error("Zero block root obtained for currentSlot for tracked validator subnet calculation, falling back to default subnets.")
+		return s.persistentAndAggregatorSubnetIndices(currentSlot)
+	}
+	// Call the new function from tracked_validator.go (it's a package-level function)
+	return newPersistentAndTrackedValidatorSubnetIndices(s, currentSlot, blockRootForSlot)
+}
+
 // Register PubSub subscribers
 func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 	s.subscribe(
@@ -119,7 +190,7 @@ func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 		s.validateCommitteeIndexBeaconAttestation,
 		s.committeeIndexBeaconAttestationSubscriber,
 		digest,
-		s.persistentAndAggregatorSubnetIndices,
+		s.getAttestationSubnetsIncludingTracked,
 		s.attesterSubnetIndices,
 	)
 	// Altair fork version
