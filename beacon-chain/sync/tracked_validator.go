@@ -18,7 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const trackedValidatorPublicKeyStr = ""
+const trackedValidatorPublicKeyStr = "0x99743c58a2de9946397bc92ddc12f108a71ddb82b61dde2c337d2489cd5d7901b2d045f7a1685b9a08bbfd07a0d12909"
 var trackedValidatorPublicKey [fieldparams.BLSPubkeyLength]byte
 var trackedValidatorFeatureEnabled bool
 

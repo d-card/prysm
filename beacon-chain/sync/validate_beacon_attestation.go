@@ -119,7 +119,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(
 			}
 		}
 	}
-	if len(validatorKeys) == 1 && validatorKeys[0] == "0x8f186c70e253e77b8c77cc1e97e3744d35fc60fb7a354f40e781e40322622dac773c9593d883ba6c02be72b23b8bd09c" {
+	if len(validatorKeys) == 1 && validatorKeys[0] == "0x99743c58a2de9946397bc92ddc12f108a71ddb82b61dde2c337d2489cd5d7901b2d045f7a1685b9a08bbfd07a0d12909" {
 		logging.AttestationLogger.WithFields(logrus.Fields{
 			"senderPeerID":   pid.String(),
 			"senderAddress":  multiAddr(pid, s.cfg.p2p.Peers()),
