@@ -55,7 +55,7 @@ Create a jwt secret.
 geth --hoodi --http --http.api eth,net,engine,admin --authrpc.jwtsecret ./jwt.hex
 ```
 
-### Consensus node (geth)
+### Consensus node (prysm)
 
 ```bash
 bazel build //cmd/beacon-chain
