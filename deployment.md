@@ -39,7 +39,7 @@ export PATH="$PATH:$HOME/bin"
 
 ### [Geth]()
 
-TODO
+https://geth.ethereum.org/docs/getting-started/installing-geth
 
 ## Deployment
 
